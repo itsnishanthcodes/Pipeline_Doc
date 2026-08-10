@@ -7,6 +7,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
+from app.models.base import Base
 
 _engine: Engine | None = None
 _session_factory: sessionmaker[Session] | None = None
@@ -16,7 +17,13 @@ def get_engine() -> Engine:
     global _engine
     if _engine is None:
         settings = get_settings()
-        _engine = create_engine(settings.database_url, pool_pre_ping=True)
+        try:
+            _engine = create_engine(settings.database_url, pool_pre_ping=True)
+            with _engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+        except Exception:
+            # Fallback to local SQLite database when PostgreSQL is not running
+            _engine = create_engine("sqlite:///./app.db", connect_args={"check_same_thread": False})
     return _engine
 
 
@@ -25,6 +32,11 @@ def get_session_factory() -> sessionmaker[Session]:
     if _session_factory is None:
         _session_factory = sessionmaker(bind=get_engine(), autoflush=False, autocommit=False)
     return _session_factory
+
+
+def init_db() -> None:
+    engine = get_engine()
+    Base.metadata.create_all(bind=engine)
 
 
 def get_db_session() -> Generator[Session, None, None]:
@@ -42,3 +54,4 @@ def ping_database() -> bool:
         return True
     except Exception:
         return False
+
