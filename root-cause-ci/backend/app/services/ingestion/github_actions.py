@@ -15,6 +15,8 @@ from app.services.ingestion.log_parser import (
     extract_stack_trace,
     first_non_empty,
 )
+from app.services.git.analysis import get_git_analysis_service
+from app.schemas.git import GitAnalysisResult
 
 
 @dataclass(slots=True)
@@ -102,7 +104,7 @@ class GitHubActionsIngestionService:
             conclusion=first_non_empty([workflow_run.get("conclusion"), payload.get("conclusion")]),
         )
         failure = self._build_failure(pipeline, job, log_excerpt)
-        classification, flaky_analysis = self._analyze_failure(failure, payload)
+        classification, flaky_analysis, git_analysis = self._analyze_failure(failure, payload)
         if failure is not None and classification is not None:
             failure.failure_type = classification.category
         return IngestionResult(
@@ -111,6 +113,7 @@ class GitHubActionsIngestionService:
             failure=failure,
             classification=classification,
             flaky_analysis=flaky_analysis,
+            git_analysis=git_analysis,
             error_signatures=extract_error_signatures(log_excerpt),
         )
 
@@ -137,7 +140,7 @@ class GitHubActionsIngestionService:
             conclusion=first_non_empty([payload.get("conclusion")]),
         )
         failure = self._build_failure(pipeline, job, log_excerpt)
-        classification, flaky_analysis = self._analyze_failure(failure, payload)
+        classification, flaky_analysis, git_analysis = self._analyze_failure(failure, payload)
         if failure is not None and classification is not None:
             failure.failure_type = classification.category
         return IngestionResult(
@@ -146,6 +149,7 @@ class GitHubActionsIngestionService:
             failure=failure,
             classification=classification,
             flaky_analysis=flaky_analysis,
+            git_analysis=git_analysis,
             error_signatures=extract_error_signatures(log_excerpt),
         )
 
@@ -173,7 +177,7 @@ class GitHubActionsIngestionService:
             timestamp=pipeline.finished_at,
         )
 
-    def _analyze_failure(self, failure: Failure | None, payload: dict[str, Any]) -> tuple[FailureClassification | None, FlakyAnalysis | None]:
+    def _analyze_failure(self, failure: Failure | None, payload: dict[str, Any]) -> tuple[FailureClassification | None, FlakyAnalysis | None, GitAnalysisResult | None]:
         if failure is None:
             return None, None
 
@@ -189,7 +193,22 @@ class GitHubActionsIngestionService:
         else:
             flaky_analysis = None
 
-        return classification, flaky_analysis
+        # optional: perform git analysis if a local repo path is provided in the payload
+        git_analysis = None
+        try:
+            local_path = payload.get("local_repo_path") or payload.get("repository_path")
+            if local_path and failure.commit_sha:
+                svc = get_git_analysis_service(local_path)
+                git_analysis = svc.find_failure_path(
+                    failing_commit_sha=failure.commit_sha,
+                    previous_successful_commit_sha=payload.get("previous_successful_commit_sha"),
+                    file_path=failure.file_path,
+                    line_number=failure.line_number,
+                )
+        except Exception:
+            git_analysis = None
+
+        return classification, flaky_analysis, git_analysis
 
     def _parse_datetime(self, value: Any) -> datetime | None:
         if not value:

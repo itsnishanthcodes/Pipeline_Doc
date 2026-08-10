@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.schemas.classification import FailureClassification, FlakyAnalysis
+from app.schemas.git import GitAnalysisResult
 
 
 class PipelineRun(BaseModel):
@@ -51,6 +52,7 @@ class IngestionResult(BaseModel):
     failure: Failure | None = None
     classification: FailureClassification | None = None
     flaky_analysis: FlakyAnalysis | None = None
+    git_analysis: GitAnalysisResult | None = None
     error_signatures: list[ErrorSignature] = Field(default_factory=list)
 
 

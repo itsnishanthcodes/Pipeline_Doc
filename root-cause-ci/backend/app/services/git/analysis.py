@@ -10,10 +10,12 @@ from app.services.git.repository import GitRepositoryClient, get_git_repository_
 
 @dataclass(slots=True)
 class CandidateWeights:
-    temporal: float = 0.35
-    file_overlap: float = 0.35
-    function_overlap: float = 0.0
-    blame: float = 0.30
+    temporal: float = 0.30
+    file_overlap: float = 0.25
+    function_overlap: float = 0.10
+    blame: float = 0.20
+    diff_relevance: float = 0.10
+    stack_overlap: float = 0.05
 
 
 class GitAnalysisService:
@@ -99,9 +101,53 @@ class GitAnalysisService:
         file_overlap_score = 1.0 if file_path and file_path in changed_files else 0.0
         blame_score = 1.0 if blame_commit_sha and blame_commit_sha == commit_sha else 0.0
         temporal_score = self._normalized_temporal_score(rank_position, total)
-        function_overlap_score = 0.0
+
+        # naive function extraction from diff (language-agnostic heuristic)
+        changed_functions: list[str] = []
+        try:
+            for line in (diff or "").splitlines():
+                line = line.strip()
+                if line.startswith("+"):
+                    # python: def or class
+                    if line.startswith("+def ") or line.startswith("+class "):
+                        parts = line[1:].split()
+                        if len(parts) >= 2:
+                            changed_functions.append(parts[1].split("(")[0].strip(":"))
+                    # javascript/ts: function keyword
+                    if "function " in line:
+                        try:
+                            name = line.split("function ", 1)[1].split("(")[0].strip()
+                            if name:
+                                changed_functions.append(name)
+                        except Exception:
+                            pass
+        except Exception:
+            changed_functions = []
+
+        function_overlap_score = 1.0 if changed_functions and file_path and file_path in changed_files else 0.0
+
+        # diff relevance: proportion of diff lines that reference the file_path or mention "error"
+        diff_lines = (diff or "").splitlines()
+        relevant_hits = 0
+        for l in diff_lines:
+            low = l.lower()
+            if file_path and file_path in l:
+                relevant_hits += 1
+            elif "error" in low or "exception" in low:
+                relevant_hits += 1
+        diff_relevance_score = round(min(1.0, relevant_hits / max(1, len(diff_lines))), 3) if diff_lines else 0.0
+
+        # stack overlap: if failing file is among changed files
+        stack_overlap_score = 1.0 if file_path and file_path in changed_files else 0.0
+
+        weights = CandidateWeights()
         rank_score = round(
-            temporal_score * 0.35 + file_overlap_score * 0.35 + blame_score * 0.30,
+            temporal_score * weights.temporal
+            + file_overlap_score * weights.file_overlap
+            + function_overlap_score * weights.function_overlap
+            + blame_score * weights.blame
+            + diff_relevance_score * weights.diff_relevance
+            + stack_overlap_score * weights.stack_overlap,
             3,
         )
         return CommitCandidate(
@@ -109,7 +155,7 @@ class GitAnalysisService:
             author=metadata.author_name,
             timestamp=metadata.timestamp,
             changed_files=changed_files,
-            changed_functions=[],
+            changed_functions=changed_functions,
             diff=diff,
             temporal_score=temporal_score,
             file_overlap_score=file_overlap_score,
@@ -144,6 +190,9 @@ class GitAnalysisService:
     def _normalized_temporal_score(self, rank_position: int, total: int) -> float:
         if total <= 1:
             return 1.0
+        # rank_position is 0-based; earlier positions are older commits.
+        # We normalize so that commits closer to the failing commit (higher index)
+        # get a larger score. Assuming commit_range is ordered from older->newer.
         return round((rank_position + 1) / total, 3)
 
 
