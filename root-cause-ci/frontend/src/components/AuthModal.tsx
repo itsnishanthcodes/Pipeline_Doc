@@ -137,12 +137,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <>
               <div className="form-row">
                 <div className="form-group">
-                  <label>GitHub Username (Optional)</label>
+                  <label>GitHub Username *</label>
                   <input
                     type="text"
                     placeholder="e.g. octocat"
                     value={githubUsername}
                     onChange={(e) => setGithubUsername(e.target.value)}
+                    required
                   />
                 </div>
 
@@ -158,15 +159,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div className="form-group">
-                <label>GitHub Personal Access Token (Optional)</label>
+                <label>GitHub Personal Access Token *</label>
                 <input
                   type="password"
                   placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                   value={githubToken}
                   onChange={(e) => setGithubToken(e.target.value)}
+                  required
                 />
                 <span className="field-hint">
-                  Used by backend webhook ingestion & fix PR generation.
+                  Requires a Classic PAT with the <code>repo</code> and <code>workflow</code> scopes to fetch pipeline logs and post analysis comments to your Pull Requests.
                 </span>
               </div>
             </>

@@ -734,6 +734,15 @@ body {
   border-radius: 6px;
 }
 
+.badge-green {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent-emerald);
+  background: rgba(52, 211, 153, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
 .repo-title {
   font-size: 1rem;
   font-weight: 700;

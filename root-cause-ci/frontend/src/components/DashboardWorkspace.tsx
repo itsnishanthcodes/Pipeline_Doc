@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { postGitHubWebhook } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { postGitHubWebhook, postGitHubAnalysis, fetchAnalysisHistory } from '../services/api';
 import type { UserAuthData } from '../services/authApi';
 
 interface DashboardWorkspaceProps {
@@ -8,10 +8,11 @@ interface DashboardWorkspaceProps {
 }
 
 export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'ingestion' | 'runs'>('ingestion');
+  const [activeTab, setActiveTab] = useState<'github_analysis' | 'runs'>('github_analysis');
 
   // Real state populated purely from live FastAPI backend webhook responses
   const [ingestedRuns, setIngestedRuns] = useState<any[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +24,85 @@ export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, on
   const [commitSha, setCommitSha] = useState('');
   const [logExcerpt, setLogExcerpt] = useState('');
   const [historicalRuns, setHistoricalRuns] = useState('PASS, FAIL, PASS, FAIL, PASS');
+
+  // GitHub Analysis states
+  const [ghRepo, setGhRepo] = useState('');
+  const [ghRunId, setGhRunId] = useState('');
+  const [ghResult, setGhResult] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    fetchAnalysisHistory().then((data) => {
+      if (data && data.reports && data.reports.length > 0) {
+        const formatted = data.reports.map((r: any) => ({
+          delivery_id: `GH-${r.run_id}`,
+          event_type: 'github_analysis',
+          pipeline_run: {
+            repository: r.repository,
+            workflow: r.job_name || 'GitHub Action',
+            branch: 'main',
+          },
+          job: {
+            conclusion: r.is_healthy || r.classification?.category === 'HEALTHY' ? 'SUCCESS' : 'FAILURE',
+          },
+          failure: {
+            error_message: r.report_preview,
+            file_path: 'GitHub Actions Log',
+            line_number: 1,
+            test_name: r.job_name,
+          },
+          classification: r.classification,
+          llm_summary: r.llm_summary,
+          pr_title: r.pr_title,
+          pr_number: r.pr_number,
+          author: r.author,
+        }));
+        setIngestedRuns(formatted);
+      }
+    });
+  }, []);
+
+  const handleGitHubAnalysis = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setGhResult(null);
+
+    const cleanRepo = ghRepo.trim();
+    const cleanRunId = ghRunId.trim();
+
+    try {
+      const response = await postGitHubAnalysis(cleanRepo, parseInt(cleanRunId, 10));
+      setGhResult(response);
+
+      // Persist to history stream
+      const historyEntry = {
+        delivery_id: `GH-${cleanRunId}`,
+        event_type: 'github_analysis',
+        pipeline_run: {
+          repository: cleanRepo,
+          workflow: response.job_name || 'GitHub Action',
+          branch: 'main',
+        },
+        job: {
+          conclusion: response.is_healthy || response.classification?.category === 'HEALTHY' ? 'SUCCESS' : 'FAILURE',
+        },
+        failure: {
+          error_message: response.report_preview,
+          file_path: 'GitHub Actions Log',
+          line_number: 1,
+          test_name: response.job_name,
+        },
+        classification: response.classification,
+        flaky_analysis: { classification: 'DETERMINISTIC' },
+      };
+      setIngestedRuns((prev) => [historyEntry, ...prev]);
+    } catch (err: any) {
+      setError(err.message || 'Failed to trigger GitHub analysis');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleIngestWebhook = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +134,7 @@ export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, on
       };
 
       setIngestedRuns((prev) => [newEntry, ...prev]);
+      setSelectedIndex(0);
       setActiveTab('runs');
     } catch (err: any) {
       setError(err.message || 'Failed to submit webhook to backend server');
@@ -62,7 +143,7 @@ export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, on
     }
   };
 
-  const selectedRun = ingestedRuns.length > 0 ? ingestedRuns[0] : null;
+  const selectedRun = ingestedRuns.length > 0 && selectedIndex < ingestedRuns.length ? ingestedRuns[selectedIndex] : null;
 
   return (
     <div className="dashboard-container">
@@ -89,110 +170,20 @@ export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, on
       {/* Tabs */}
       <div className="dashboard-nav-tabs">
         <button
-          className={`dash-tab ${activeTab === 'ingestion' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ingestion')}
+          className={`dash-tab ${activeTab === 'github_analysis' ? 'active' : ''}`}
+          onClick={() => setActiveTab('github_analysis')}
         >
-          📡 Ingest Failure (FastAPI Endpoint)
+          🔍 GitHub Pipeline Analysis
         </button>
         <button
           className={`dash-tab ${activeTab === 'runs' ? 'active' : ''}`}
           onClick={() => setActiveTab('runs')}
         >
-          📊 Ingested Results & Analysis ({ingestedRuns.length})
+          📊 Ingestion History ({ingestedRuns.length})
         </button>
       </div>
 
-      {/* Tab 1: Live Ingestion Form */}
-      {activeTab === 'ingestion' && (
-        <div className="glass-card trigger-panel">
-          <h3>Post Live Webhook Failure to Backend</h3>
-          <p className="subtitle">
-            This sends a live request to <code>POST /webhooks/github</code>. Backend parses your stack trace, runs failure classification, and calculates flaky test probability.
-          </p>
 
-          {error && <div className="error-alert">{error}</div>}
-
-          <form onSubmit={handleIngestWebhook} className="webhook-form">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Repository Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. acme/payment-service"
-                  value={repository}
-                  onChange={(e) => setRepository(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Workflow Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. CI / CD Build"
-                  value={workflow}
-                  onChange={(e) => setWorkflow(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Target Branch *</label>
-                <input
-                  type="text"
-                  placeholder="main"
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Commit SHA</label>
-                <input
-                  type="text"
-                  placeholder="e.g. abc1234"
-                  value={commitSha}
-                  onChange={(e) => setCommitSha(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Historical Run History (Comma Separated)</label>
-              <input
-                type="text"
-                placeholder="PASS, FAIL, PASS, FAIL, PASS"
-                value={historicalRuns}
-                onChange={(e) => setHistoricalRuns(e.target.value)}
-              />
-              <span className="field-hint">Used by Flaky Test Detector to calculate pass/fail interleaving probability.</span>
-            </div>
-
-            <div className="form-group">
-              <label>Build Log Excerpt / Stack Trace *</label>
-              <textarea
-                rows={6}
-                placeholder={`Paste actual build failure log or stack trace...
-Example:
-Traceback (most recent call last):
-  File "src/auth/service.py", line 42, in validate_token
-    raise AssertionError("Invalid token signature")
-FAILED tests/test_auth.py::test_invalid_token`}
-                value={logExcerpt}
-                onChange={(e) => setLogExcerpt(e.target.value)}
-                required
-              />
-            </div>
-
-            <button type="submit" className="submit-btn primary-glow" disabled={loading}>
-              {loading ? 'Processing via Backend APIs...' : 'Send Live Failure Event'}
-            </button>
-          </form>
-        </div>
-      )}
 
       {/* Tab 2: Live Ingested Backend Results */}
       {activeTab === 'runs' && (
@@ -203,15 +194,26 @@ FAILED tests/test_auth.py::test_invalid_token`}
 
             {ingestedRuns.length === 0 ? (
               <p className="muted-text" style={{ marginTop: '20px' }}>
-                No failure events ingested yet. Switch to the <strong>Ingest Failure</strong> tab and submit a live stack trace!
+                No failure events ingested yet. Run a <strong>GitHub Pipeline Analysis</strong> or submit a live stack trace!
               </p>
             ) : (
               <div className="runs-scroll-list">
                 {ingestedRuns.map((entry, idx) => (
-                  <div key={idx} className="run-item-card">
+                  <div
+                    key={idx}
+                    className={`run-item-card ${selectedIndex === idx ? 'active' : ''}`}
+                    onClick={() => setSelectedIndex(idx)}
+                    style={{
+                      cursor: 'pointer',
+                      borderColor: selectedIndex === idx ? '#818cf8' : undefined,
+                      backgroundColor: selectedIndex === idx ? 'rgba(99, 102, 241, 0.15)' : undefined
+                    }}
+                  >
                     <div className="run-card-top">
                       <span className="run-id">{entry.delivery_id || `EVT-${idx + 1}`}</span>
-                      <span className="badge-red">{entry.job?.conclusion || 'FAILURE'}</span>
+                      <span className={entry.job?.conclusion === 'SUCCESS' || entry.classification?.category === 'HEALTHY' ? 'badge-green' : 'badge-red'}>
+                        {entry.job?.conclusion === 'SUCCESS' || entry.classification?.category === 'HEALTHY' ? 'SUCCESS' : (entry.job?.conclusion || 'FAILURE')}
+                      </span>
                     </div>
                     <h4 className="repo-title">{entry.pipeline_run?.repository}</h4>
                     <div className="run-meta">
@@ -238,24 +240,24 @@ FAILED tests/test_auth.py::test_invalid_token`}
                 <div className="detail-cards-grid">
                   <div className="mini-card">
                     <span className="label">Classification</span>
+                    <strong className={selectedRun.classification?.category === 'HEALTHY' ? 'text-emerald' : 'text-cyan'}>
+                      {selectedRun.classification?.category === 'HEALTHY' ? '🟢 HEALTHY (PASSED)' : selectedRun.classification?.category || 'N/A'}
+                    </strong>
+                  </div>
+                  <div className="mini-card">
+                    <span className="label">Author Attribution</span>
                     <strong className="text-cyan">
-                      {selectedRun.classification?.category || 'N/A'}
+                      {selectedRun.author ? `@${selectedRun.author}` : 'N/A'}
                     </strong>
                   </div>
-                  <div className="mini-card">
-                    <span className="label">Confidence</span>
-                    <strong>
-                      {selectedRun.classification
-                        ? `${(selectedRun.classification.confidence * 100).toFixed(0)}%`
-                        : 'N/A'}
-                    </strong>
-                  </div>
-                  <div className="mini-card">
-                    <span className="label">Flaky Result</span>
-                    <strong className="text-emerald">
-                      {selectedRun.flaky_analysis?.classification || 'N/A'}
-                    </strong>
-                  </div>
+                  {selectedRun.pr_title && (
+                    <div className="mini-card">
+                      <span className="label">Pull Request</span>
+                      <strong className="text-indigo">
+                        #{selectedRun.pr_number}: {selectedRun.pr_title}
+                      </strong>
+                    </div>
+                  )}
                 </div>
 
                 {selectedRun.failure && (
@@ -278,6 +280,113 @@ FAILED tests/test_auth.py::test_invalid_token`}
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Tab 3: GitHub Pipeline Analysis */}
+      {activeTab === 'github_analysis' && (
+        <div className="glass-card trigger-panel">
+          <h3>Analyze GitHub Pipeline Failure</h3>
+          <p className="subtitle">
+            Fetch pipeline logs from GitHub, classify the root cause, and optionally post an automated analysis report to the relevant Pull Request.
+          </p>
+
+          {error && <div className="error-alert">{error}</div>}
+
+          <form onSubmit={handleGitHubAnalysis} className="webhook-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label>GitHub Repository *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. owner/repo"
+                  value={ghRepo}
+                  onChange={(e) => setGhRepo(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>GitHub Run ID *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 1234567890"
+                  value={ghRunId}
+                  onChange={(e) => setGhRunId(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="submit-btn primary-glow" disabled={loading}>
+              {loading ? 'Analyzing GitHub Pipeline...' : 'Run Pipeline Analysis'}
+            </button>
+          </form>
+
+          {ghResult && (
+            <div className="run-detail-panel glass-card" style={{ marginTop: '20px' }}>
+              <div className="panel-top">
+                <span className="eyebrow">Analysis Complete</span>
+                <h3>Job: {ghResult.job_name}</h3>
+                <p className="workflow-name">Status: {ghResult.message || 'Processed'}</p>
+              </div>
+
+              {ghResult.classification && (
+                <div className="detail-cards-grid">
+                  <div className="mini-card">
+                    <span className="label">Category</span>
+                    <strong className={ghResult.classification.category === 'HEALTHY' ? 'text-emerald' : 'text-cyan'}>
+                      {ghResult.classification.category === 'HEALTHY' ? '🟢 HEALTHY (PASSED)' : ghResult.classification.category}
+                    </strong>
+                  </div>
+                  <div className="mini-card">
+                    <span className="label">Comment Posted to PR</span>
+                    <strong className={ghResult.comment_posted ? 'text-emerald' : 'text-red'}>
+                      {ghResult.comment_posted ? 'YES' : 'NO'}
+                    </strong>
+                  </div>
+                  {ghResult.author && (
+                    <div className="mini-card">
+                      <span className="label">Author Attribution</span>
+                      <strong className="text-cyan">@{ghResult.author}</strong>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {ghResult.llm_summary && (
+                <div className="mini-card" style={{ marginTop: '15px', background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.3)' }}>
+                  <span className="label" style={{ color: '#818cf8', fontWeight: 600 }}>🤖 Groq LLM Narrative Summary</span>
+                  <p style={{ marginTop: '8px', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                    {ghResult.llm_summary}
+                  </p>
+                </div>
+              )}
+
+              {ghResult.report_preview && (
+                <div className="code-snippet-box">
+                  <div className="snippet-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Generated Report Preview</span>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(ghResult.report_preview);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                    >
+                      {copied ? '✅ Copied to Clipboard!' : '📋 Copy Report'}
+                    </button>
+                  </div>
+                  <pre className="error-terminal">
+                    {ghResult.report_preview}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

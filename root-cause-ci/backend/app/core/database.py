@@ -19,10 +19,7 @@ def get_engine() -> Engine:
         settings = get_settings()
         try:
             _engine = create_engine(settings.database_url, pool_pre_ping=True)
-            with _engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
         except Exception:
-            # Fallback to local SQLite database when PostgreSQL is not running
             _engine = create_engine("sqlite:///./app.db", connect_args={"check_same_thread": False})
     return _engine
 
@@ -34,9 +31,22 @@ def get_session_factory() -> sessionmaker[Session]:
     return _session_factory
 
 
+_initialized = False
+
+
 def init_db() -> None:
-    engine = get_engine()
-    Base.metadata.create_all(bind=engine)
+    global _initialized, _engine, _session_factory
+    if _initialized:
+        return
+    try:
+        engine = get_engine()
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        # PostgreSQL is unreachable or timed out -> Fallback to SQLite instantly
+        _engine = create_engine("sqlite:///./app.db", connect_args={"check_same_thread": False})
+        _session_factory = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
+        Base.metadata.create_all(bind=_engine)
+    _initialized = True
 
 
 def get_db_session() -> Generator[Session, None, None]:

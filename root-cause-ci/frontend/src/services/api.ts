@@ -52,3 +52,37 @@ export async function postGitHubWebhook(payload: WebhookPayloadInput) {
 
   return response.json();
 }
+
+export async function postGitHubAnalysis(repository: string, runId: number) {
+  const token = localStorage.getItem('access_token');
+  const response = await fetch(`${baseUrl}/analysis/github`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ repository, run_id: runId }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: 'Analysis request failed' }));
+    throw new Error(err.detail || 'GitHub pipeline analysis failed');
+  }
+
+  return response.json();
+}
+
+export async function fetchAnalysisHistory() {
+  const token = localStorage.getItem('access_token');
+  const response = await fetch(`${baseUrl}/analysis/history`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    return { reports: [] };
+  }
+
+  return response.json();
+}

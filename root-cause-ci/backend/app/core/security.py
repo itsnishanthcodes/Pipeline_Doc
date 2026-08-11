@@ -19,6 +19,15 @@ def create_simple_token(user_id: int, email: str) -> str:
     return base64.b64encode(raw.encode("utf-8")).decode("utf-8")
 
 
+def decode_token(token: str) -> dict:
+    try:
+        raw = base64.b64decode(token.encode("utf-8")).decode("utf-8")
+        user_id, email = raw.split(":", 1)
+        return {"sub": user_id, "email": email}
+    except Exception:
+        return {}
+
+
 def verify_webhook_signature(payload: bytes, signature: str | None, secret: str) -> bool:
     if not signature:
         return False

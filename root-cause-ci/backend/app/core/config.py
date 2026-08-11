@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     github_token: str | None = Field(default=None, alias="GITHUB_TOKEN")
     github_repository: str | None = Field(default=None, alias="GITHUB_REPOSITORY")
     github_webhook_secret: str | None = Field(default=None, alias="GITHUB_WEBHOOK_SECRET")
+    llm_api_key: str | None = Field(default=None, alias="LLM_API_KEY")
+    llm_model: str = Field(default="llama-3.1-8b-instant", alias="LLM_MODEL")
+    llm_api_url: str = Field(default="https://api.groq.com/openai/v1/chat/completions", alias="LLM_API_URL")
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173"],
         alias="BACKEND_CORS_ORIGINS",
