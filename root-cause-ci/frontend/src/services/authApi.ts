@@ -5,6 +5,7 @@ export interface UserAuthData {
   full_name: string;
   email: string;
   github_username?: string;
+  github_token?: string;
   role: string;
 }
 
@@ -14,10 +15,19 @@ export interface AuthResponse {
   user: UserAuthData;
 }
 
+export interface ProfileUpdatePayload {
+  full_name?: string;
+  github_username?: string;
+  github_token?: string;
+  current_password?: string;
+  new_password?: string;
+  role?: string;
+}
+
 export async function registerUser(payload: {
   full_name: string;
   email: string;
-  password: str;
+  password: string;
   github_username?: string;
   github_token?: string;
   role: string;
@@ -38,7 +48,7 @@ export async function registerUser(payload: {
 
 export async function loginUser(payload: {
   email: string;
-  password: str;
+  password: string;
 }): Promise<AuthResponse> {
   const res = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
@@ -49,6 +59,60 @@ export async function loginUser(payload: {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Login failed' }));
     throw new Error(err.detail || 'Invalid email or password');
+  }
+
+  return res.json();
+}
+
+export async function fetchProfile(token: string): Promise<UserAuthData> {
+  const res = await fetch(`${baseUrl}/auth/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to fetch profile' }));
+    throw new Error(err.detail || 'Failed to fetch profile');
+  }
+
+  return res.json();
+}
+
+export async function updateProfile(token: string, payload: ProfileUpdatePayload): Promise<UserAuthData> {
+  const res = await fetch(`${baseUrl}/auth/me`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to update profile' }));
+    throw new Error(err.detail || 'Failed to update profile');
+  }
+
+  return res.json();
+}
+
+export interface GitHubVerifyResponse {
+  valid: boolean;
+  message: string;
+  avatar_url?: string;
+}
+
+export async function verifyGitHubCredentials(github_username?: string, github_token?: string): Promise<GitHubVerifyResponse> {
+  const res = await fetch(`${baseUrl}/auth/verify-github`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ github_username, github_token }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'GitHub verification failed' }));
+    throw new Error(err.detail || 'GitHub verification failed');
   }
 
   return res.json();

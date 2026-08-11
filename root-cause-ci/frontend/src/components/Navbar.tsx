@@ -4,6 +4,7 @@ interface NavbarProps {
   onOpenAuth: (mode: 'login' | 'register') => void;
   currentUser: any;
   onLogout: () => void;
+  onOpenProfile?: () => void;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
 }
@@ -12,6 +13,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
   currentUser,
   onLogout,
+  onOpenProfile,
   theme,
   onToggleTheme,
 }) => {
@@ -43,8 +45,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span className="phase-badge pulse">Production Prototype</span>
 
           {currentUser ? (
-            <div className="user-menu">
-              <span className="user-greeting">👋 {currentUser.full_name}</span>
+            <div className="user-menu" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button 
+                className="user-greeting" 
+                onClick={onOpenProfile}
+                title="Manage Profile & GitHub Credentials"
+                style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '0.35rem 0.75rem', borderRadius: '20px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}
+              >
+                <span>👋</span>
+                <span>{currentUser.full_name}</span>
+                <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>⚙️ Profile</span>
+              </button>
               <button className="btn-secondary" onClick={onLogout}>
                 Logout
               </button>

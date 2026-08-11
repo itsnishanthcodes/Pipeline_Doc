@@ -17,11 +17,11 @@ class PipelineAnalyzer:
 
     async def analyze_pipeline(self, repo: str, run_id: int, user_id: int) -> Dict[str, Any]:
         repo = repo.strip()
+        from app.core.config import get_settings
         user = self.db.scalar(select(User).where(User.id == user_id))
-        if not user or not user.github_token:
-            raise ValueError("User not found or GitHub token missing")
+        token = (user.github_token if user and user.github_token else None) or get_settings().github_token
 
-        github = GitHubClient(user.github_token)
+        github = GitHubClient(token)
 
         # 1. Fetch workflow run
         try:

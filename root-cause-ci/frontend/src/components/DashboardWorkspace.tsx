@@ -5,9 +5,10 @@ import type { UserAuthData } from '../services/authApi';
 interface DashboardWorkspaceProps {
   user: UserAuthData;
   onLogout: () => void;
+  onOpenProfile?: () => void;
 }
 
-export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, onLogout }) => {
+export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, onLogout, onOpenProfile }) => {
   const [activeTab, setActiveTab] = useState<'github_analysis' | 'runs'>('github_analysis');
 
   // Real state populated purely from live FastAPI backend webhook responses
@@ -160,7 +161,10 @@ export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, on
           </div>
         </div>
 
-        <div className="dashboard-actions">
+        <div className="dashboard-actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button className="btn-secondary" onClick={onOpenProfile} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            ⚙️ Profile & Credentials
+          </button>
           <button className="btn-secondary" onClick={onLogout}>
             Sign Out
           </button>

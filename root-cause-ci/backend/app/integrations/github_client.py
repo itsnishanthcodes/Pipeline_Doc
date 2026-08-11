@@ -2,13 +2,14 @@ import httpx
 from typing import Any, List, Dict
 
 class GitHubClient:
-    def __init__(self, token: str):
+    def __init__(self, token: str | None = None):
         self.token = token
         self.base_url = "https://api.github.com"
         self.headers = {
-            "Authorization": f"Bearer {self.token}",
             "Accept": "application/vnd.github.v3+json",
         }
+        if self.token and self.token.strip():
+            self.headers["Authorization"] = f"Bearer {self.token.strip()}"
 
     async def _get(self, endpoint: str) -> Any:
         async with httpx.AsyncClient() as client:

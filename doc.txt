@@ -1,0 +1,1553 @@
+Implement Phase 1 only. Do not implement later phases yet.
+
+You are a senior software architect, Python backend engineer, DevOps engineer,
+program analysis researcher, and AI/ML engineer.
+
+I am building a research-oriented system called:
+
+"Root Cause Driven CI/CD Pipeline Automation"
+
+The goal is NOT to build another generic AI chatbot that reads CI/CD logs and
+generates explanations.
+
+The goal is to build an evidence-driven CI/CD failure diagnosis and verified
+remediation system based on this workflow:
+
+    FIND → ATTRIBUTE → EXPLAIN → FIX → VERIFY
+
+The system must identify whether a CI/CD failure is a genuine regression,
+flaky test, infrastructure/configuration problem, or unknown failure.
+
+For genuine code regressions, it must determine the most likely responsible
+code change using CI logs, stack traces, Git history, AST analysis, dependency
+relationships, temporal information, and historical evidence.
+
+It must produce an explicit human-readable evidence chain explaining why a
+particular commit/change was ranked as the likely root cause.
+
+Only after root-cause attribution should an LLM be allowed to generate a
+constrained patch.
+
+The generated patch must be verified inside an isolated Docker sandbox before
+being recommended to the developer.
+
+The system must NEVER automatically modify production code or deploy directly
+to production.
+
+The normal workflow must remain:
+
+Developer → Git Provider → CI/CD → Failure → Your System → Diagnosis →
+Verified Fix Proposal → Developer Review → Normal CI/CD → Deployment
+
+============================================================
+1. CORE RESEARCH OBJECTIVE
+============================================================
+
+The central research question is:
+
+"How can program analysis and evidence-based commit attribution improve the
+reliability of LLM-assisted CI/CD failure remediation?"
+
+The system should investigate whether combining:
+
+- CI/CD logs
+- Git history
+- stack traces
+- AST/code structure
+- dependency graphs
+- flaky-test detection
+- temporal relationships
+- historical failure information
+- transparent confidence scoring
+- constrained LLM patch generation
+- sandbox verification
+
+can provide more trustworthy CI/CD remediation than simply sending raw logs
+to an LLM.
+
+Do NOT design the system as an LLM-first architecture.
+
+The LLM must be one component inside an evidence-driven pipeline.
+
+============================================================
+2. IMPORTANT DIFFERENTIATION
+============================================================
+
+Existing systems already perform some combination of:
+
+- CI log analysis
+- failure explanation
+- LLM-based root cause analysis
+- automatic patch generation
+- CI reruns
+- self-healing workflows
+
+Therefore, this project must NOT claim novelty simply because it uses an LLM.
+
+The main focus of this implementation is:
+
+1. Failure classification
+2. Flaky-test detection
+3. Code-level dependency analysis
+4. Responsible commit/change attribution
+5. Transparent confidence scoring
+6. Human-readable evidence chains
+7. Constrained patch generation
+8. Independent sandbox verification
+
+The system should be able to say:
+
+"This is probably a flaky test."
+
+or:
+
+"This is most likely an infrastructure/configuration problem."
+
+or:
+
+"Commit ABC123 is the most likely responsible change with 91% confidence."
+
+and explain WHY.
+
+If there is insufficient evidence, the system must say:
+
+"Insufficient evidence for reliable attribution."
+
+Do not force a root-cause prediction.
+
+============================================================
+3. HIGH-LEVEL ARCHITECTURE
+============================================================
+
+Build the system using the following architecture:
+
+                    Git Repository
+                          |
+                          v
+                    CI/CD Pipeline
+                          |
+                     failure event
+                          |
+                          v
+                 +-------------------+
+                 | Log Ingestion     |
+                 +---------+---------+
+                           |
+                           v
+                 +-------------------+
+                 | Failure           |
+                 | Classification    |
+                 +---------+---------+
+                           |
+                +----------+----------+
+                |          |          |
+                v          v          v
+             Flaky       Infra/     Genuine
+             Test        Config     Code Failure
+                |          |          |
+                v          v          v
+              Report     Report     RCA Engine
+                                      |
+                         +------------+-------------+
+                         |            |             |
+                         v            v             v
+                       Git        Stack Trace      AST
+                     Analysis                     Analysis
+                         |            |             |
+                         +------------+-------------+
+                                      |
+                                      v
+                              Dependency Graph
+                                      |
+                                      v
+                              Candidate Commits
+                                      |
+                                      v
+                              Confidence Engine
+                                      |
+                                      v
+                              Evidence Chain
+                                      |
+                                      v
+                          Constrained Patch Generator
+                                      |
+                                      v
+                              Patch Safety Check
+                                      |
+                                      v
+                               Docker Sandbox
+                                      |
+                                      v
+                                Verification
+                                      |
+                         +------------+------------+
+                         |                         |
+                        PASS                      FAIL
+                         |                         |
+                         v                         v
+                  Verified Fix Report          Reject Patch
+                         |
+                         v
+                    Create Fix PR
+                         |
+                         v
+                  Developer Review
+                         |
+                         v
+                   Normal CI/CD
+
+============================================================
+4. TECHNOLOGY STACK
+============================================================
+
+Use the following technologies unless there is a strong technical reason to
+change them.
+
+Backend:
+- Python 3.12+
+- FastAPI
+- Pydantic
+- SQLAlchemy
+- PostgreSQL
+
+Git:
+- Git CLI
+- GitPython where useful
+
+Program analysis:
+- Tree-sitter
+- tree-sitter-language packages
+- AST-based analysis
+- Python AST where appropriate
+
+Graph:
+- NetworkX
+
+Testing:
+- pytest
+
+Container isolation:
+- Docker
+- Docker SDK for Python where useful
+
+Frontend:
+- React
+- TypeScript
+- Vite
+
+Frontend styling:
+- Simple clean CSS or Tailwind CSS
+- Do not spend excessive time on visual design
+
+CI/CD integration:
+- GitHub Actions first
+
+LLM:
+- Create an abstraction layer so the LLM provider can be changed.
+- Support OpenAI-compatible APIs.
+- Do NOT hard-code a single provider throughout the application.
+
+Database:
+- PostgreSQL
+
+Local development:
+- Docker Compose
+
+API documentation:
+- FastAPI OpenAPI/Swagger
+
+Logging:
+- Python structured logging
+
+Configuration:
+- .env
+- Pydantic Settings
+
+============================================================
+5. PROJECT STRUCTURE
+============================================================
+
+Create a clean monorepo:
+
+root-cause-ci/
+|
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   │
+│   │   ├── api/
+│   │   │   ├── routes/
+│   │   │   │   ├── pipelines.py
+│   │   │   │   ├── failures.py
+│   │   │   │   ├── diagnoses.py
+│   │   │   │   ├── patches.py
+│   │   │   │   └── verification.py
+│   │   │   └── dependencies.py
+│   │   │
+│   │   ├── core/
+│   │   │   ├── config.py
+│   │   │   ├── logging.py
+│   │   │   └── security.py
+│   │   │
+│   │   ├── models/
+│   │   │   ├── pipeline.py
+│   │   │   ├── failure.py
+│   │   │   ├── commit.py
+│   │   │   ├── function.py
+│   │   │   ├── graph.py
+│   │   │   ├── evidence.py
+│   │   │   ├── diagnosis.py
+│   │   │   ├── patch.py
+│   │   │   └── verification.py
+│   │   │
+│   │   ├── schemas/
+│   │   │   ├── pipeline.py
+│   │   │   ├── failure.py
+│   │   │   ├── diagnosis.py
+│   │   │   ├── evidence.py
+│   │   │   ├── patch.py
+│   │   │   └── verification.py
+│   │   │
+│   │   ├── services/
+│   │   │   ├── ingestion/
+│   │   │   ├── classification/
+│   │   │   ├── flaky/
+│   │   │   ├── git/
+│   │   │   ├── ast/
+│   │   │   ├── graph/
+│   │   │   ├── attribution/
+│   │   │   ├── confidence/
+│   │   │   ├── evidence/
+│   │   │   ├── llm/
+│   │   │   ├── patch/
+│   │   │   └── verification/
+│   │   │
+│   │   ├── integrations/
+│   │   │   ├── github/
+│   │   │   └── ci/
+│   │   │
+│   │   └── workers/
+│   │       └── diagnosis_worker.py
+│   │
+│   ├── tests/
+│   │   ├── unit/
+│   │   ├── integration/
+│   │   └── fixtures/
+│   │
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── types/
+│   │   └── App.tsx
+│   ├── package.json
+│   └── Dockerfile
+│
+├── sandbox/
+│   ├── Dockerfile
+│   └── runner/
+│
+├── demo-repository/
+│   ├── src/
+│   ├── tests/
+│   └── .github/
+│
+├── docker-compose.yml
+├── .env.example
+├── README.md
+└── docs/
+    ├── architecture.md
+    ├── api.md
+    ├── research.md
+    └── security.md
+
+Keep modules loosely coupled and testable.
+
+============================================================
+6. MODULE 1 — LOG INGESTION
+============================================================
+
+Build a provider abstraction:
+
+CIProvider
+
+with methods such as:
+
+- get_workflow_run()
+- get_job()
+- get_logs()
+- get_test_results()
+- get_commit()
+- get_pull_request()
+
+Implement:
+
+GitHubActionsProvider
+
+first.
+
+Do NOT hard-code GitHub logic throughout the system.
+
+Normalize incoming information into a common internal model:
+
+PipelineRun:
+- id
+- repository
+- workflow
+- branch
+- commit_sha
+- started_at
+- finished_at
+- status
+
+Job:
+- id
+- name
+- status
+- conclusion
+
+Failure:
+- id
+- pipeline_id
+- job_id
+- failure_type
+- test_name
+- error_message
+- stack_trace
+- file_path
+- line_number
+- commit_sha
+- timestamp
+
+The ingestion module should:
+
+1. Receive a failure event.
+2. Retrieve complete relevant metadata.
+3. Retrieve logs.
+4. Extract error signatures.
+5. Extract stack traces.
+6. Identify failed tests.
+7. Identify file/line references.
+8. Store normalized data.
+
+Do not send raw logs directly to the LLM.
+
+============================================================
+7. MODULE 2 — FAILURE CLASSIFICATION
+============================================================
+
+Classify failures into:
+
+- CODE_REGRESSION
+- FLAKY_TEST
+- INFRASTRUCTURE_FAILURE
+- CONFIGURATION_FAILURE
+- DEPENDENCY_FAILURE
+- CI_CONFIGURATION_FAILURE
+- UNKNOWN
+
+Use deterministic signals first.
+
+Examples:
+
+Missing environment variable:
+→ CONFIGURATION_FAILURE
+
+Docker daemon unavailable:
+→ INFRASTRUCTURE_FAILURE
+
+Package installation failure:
+→ DEPENDENCY_FAILURE
+
+Assertion failure after a code change:
+→ CODE_REGRESSION candidate
+
+Do not use the LLM as the only classifier.
+
+Return:
+
+FailureClassification:
+- category
+- confidence
+- signals
+- explanation
+
+============================================================
+8. MODULE 3 — FLAKY TEST DETECTION
+============================================================
+
+Implement historical flaky-test detection.
+
+For a test, retrieve previous executions.
+
+Track:
+
+- pass/fail history
+- failure frequency
+- consecutive failures
+- failures across commits
+- failures without code changes
+- intermittent behavior
+
+Example:
+
+PASS
+PASS
+FAIL
+PASS
+PASS
+FAIL
+PASS
+
+should produce a high flaky probability.
+
+However, do not simply use a fixed threshold.
+
+Create a configurable scoring mechanism.
+
+Return:
+
+FlakyAnalysis:
+- flaky_probability
+- classification
+- evidence
+- historical_runs
+
+If a failure is classified as likely flaky:
+
+STOP automated patch generation.
+
+Produce a diagnosis report explaining why.
+
+============================================================
+9. MODULE 4 — GIT ANALYSIS
+============================================================
+
+Analyze Git history.
+
+For a failure:
+
+1. Identify failing commit.
+2. Identify previous successful commit.
+3. Compare commits.
+4. Identify changed files.
+5. Identify changed lines.
+6. Identify authors.
+7. Identify timestamps.
+8. Identify parent commits.
+9. Retrieve PR/MR information if available.
+
+Create:
+
+CommitCandidate:
+- commit_sha
+- author
+- timestamp
+- changed_files
+- changed_functions
+- diff
+- temporal_score
+- file_overlap_score
+- function_overlap_score
+
+Use Git blame where appropriate.
+
+Do not assume the latest commit is automatically responsible.
+
+============================================================
+10. MODULE 5 — AST / TREE-SITTER ANALYSIS
+============================================================
+
+Use Tree-sitter to parse supported source files.
+
+Initially support:
+
+- Python
+- JavaScript
+- TypeScript
+
+Design the parser so more languages can be added later.
+
+Extract:
+
+- functions
+- classes
+- imports
+- function calls
+- definitions
+- references
+- relationships
+
+Map:
+
+test → function → file
+
+and:
+
+changed line → function → file → commit
+
+If exact static analysis is impossible, explicitly mark the relationship as
+uncertain instead of inventing one.
+
+============================================================
+11. MODULE 6 — CODE DEPENDENCY GRAPH
+============================================================
+
+Use NetworkX.
+
+Graph nodes:
+
+- TEST
+- FUNCTION
+- CLASS
+- FILE
+- COMMIT
+- PULL_REQUEST
+
+Graph edges:
+
+- CALLS
+- IMPORTS
+- DEFINED_IN
+- MODIFIED_BY
+- TESTS
+- DEPENDS_ON
+
+Example:
+
+test_invalid_token
+    --TESTS-->
+validate_token
+    --DEFINED_IN-->
+auth/service.py
+    --MODIFIED_BY-->
+commit ABC123
+
+The graph must be queryable.
+
+Implement functions such as:
+
+find_failure_path()
+find_related_functions()
+find_related_files()
+find_candidate_commits()
+
+============================================================
+12. MODULE 7 — ROOT CAUSE ATTRIBUTION
+============================================================
+
+This is the core research module.
+
+For each candidate commit, calculate multiple signals.
+
+Required signals:
+
+1. Temporal proximity
+2. File overlap
+3. Stack trace overlap
+4. Function overlap
+5. Dependency graph relationship
+6. Git diff relevance
+7. Historical failure relationship
+
+Do NOT make the final score opaque.
+
+Start with a transparent weighted scoring model.
+
+Example:
+
+score =
+    0.20 * temporal_proximity
+  + 0.20 * file_overlap
+  + 0.20 * stack_trace_overlap
+  + 0.20 * function_overlap
+  + 0.15 * dependency_relationship
+  + 0.05 * historical_evidence
+
+Make weights configurable.
+
+Normalize all scores to [0,1].
+
+Final confidence = weighted score * 100.
+
+Return ranked candidates.
+
+============================================================
+13. MODULE 8 — EVIDENCE CHAIN
+============================================================
+
+For every candidate, generate explicit evidence.
+
+Example:
+
+Candidate:
+ABC123
+
+Confidence:
+91%
+
+Evidence:
+
+1. Commit modified auth/service.py.
+2. Failure stack trace references auth/service.py.
+3. Commit modified validate_token().
+4. validate_token() lies on the failing test execution path.
+5. Test passed before ABC123.
+6. Test failed after ABC123.
+7. No similar failure existed in previous successful executions.
+
+Each evidence item must contain:
+
+- signal
+- observed value
+- score contribution
+- human-readable explanation
+- source
+
+Do NOT allow the LLM to invent evidence.
+
+Evidence must come from actual collected data.
+
+============================================================
+14. MODULE 9 — LLM PATCH GENERATION
+============================================================
+
+Create an LLM provider interface:
+
+LLMProvider
+
+Implement an OpenAI-compatible provider.
+
+The LLM receives only:
+
+- failure information
+- relevant log snippets
+- stack trace
+- root cause evidence
+- relevant code
+- relevant Git diff
+- allowed files
+- allowed functions
+
+The prompt must explicitly constrain:
+
+- files that may be changed
+- functions that may be changed
+- maximum scope of modification
+- requirement to produce minimal patch
+- requirement not to modify unrelated files
+
+The LLM should return structured JSON:
+
+{
+  "summary": "...",
+  "root_cause": "...",
+  "patch": "...",
+  "modified_files": [],
+  "modified_functions": [],
+  "reasoning": "..."
+}
+
+Never trust the returned modified_files blindly.
+
+Verify the actual patch using Git diff.
+
+============================================================
+15. MODULE 10 — PATCH SAFETY VALIDATION
+============================================================
+
+Before executing the patch:
+
+1. Apply patch to a temporary Git worktree.
+2. Inspect changed files.
+3. Compare actual modifications against allowed scope.
+4. Reject if unrelated files were modified.
+5. Reject if protected files are modified.
+6. Reject if patch cannot be applied cleanly.
+
+The system must implement:
+
+PatchScopeViolation
+
+and provide a clear explanation.
+
+============================================================
+16. MODULE 11 — DOCKER SANDBOX VERIFICATION
+============================================================
+
+Never execute an LLM-generated patch directly on the host system.
+
+Create an isolated Docker sandbox.
+
+Workflow:
+
+1. Checkout repository.
+2. Create temporary workspace.
+3. Apply patch.
+4. Build sandbox image.
+5. Install dependencies.
+6. Run failing test.
+7. Run related tests.
+8. Run project build.
+9. Capture stdout/stderr.
+10. Capture exit codes.
+11. Destroy sandbox.
+
+Verification result:
+
+VerificationResult:
+- build_passed
+- failing_test_passed
+- related_tests_passed
+- test_output
+- errors
+- duration
+- status
+
+Possible statuses:
+
+VERIFIED
+FAILED
+PATCH_REJECTED
+SANDBOX_ERROR
+
+A patch must NOT be considered verified merely because the original failing
+test passes.
+
+============================================================
+17. MODULE 12 — FIX PR
+============================================================
+
+If the patch passes verification:
+
+DO NOT merge automatically.
+
+Create a proposed fix branch.
+
+If GitHub integration is configured:
+
+Create a Pull Request containing:
+
+- original failure
+- diagnosis
+- confidence score
+- evidence chain
+- generated patch
+- verification results
+
+The developer must review and approve it.
+
+If GitHub credentials are unavailable, provide a local/export mode.
+
+============================================================
+18. DATABASE
+============================================================
+
+Use PostgreSQL.
+
+Create tables/entities for:
+
+repositories
+pipeline_runs
+jobs
+failures
+test_executions
+commits
+files
+functions
+graph_nodes
+graph_edges
+candidate_causes
+evidence
+patches
+verification_runs
+diagnoses
+
+Preserve historical results.
+
+This historical data will later support:
+
+- flaky detection
+- historical similarity
+- confidence model evaluation
+- system improvement
+
+============================================================
+19. API
+============================================================
+
+Implement REST endpoints:
+
+POST /webhooks/github
+
+GET /pipelines
+
+GET /pipelines/{id}
+
+GET /failures
+
+GET /failures/{id}
+
+POST /failures/{id}/analyze
+
+GET /failures/{id}/diagnosis
+
+GET /failures/{id}/evidence
+
+GET /failures/{id}/candidates
+
+POST /failures/{id}/generate-patch
+
+POST /patches/{id}/verify
+
+GET /patches/{id}
+
+GET /verification/{id}
+
+GET /health
+
+The API must return structured JSON.
+
+============================================================
+20. FRONTEND
+============================================================
+
+Build a React + TypeScript dashboard.
+
+Required pages:
+
+1. Dashboard
+2. Pipeline Runs
+3. Failure Details
+4. Root Cause Analysis
+5. Evidence Chain
+6. Patch Review
+7. Verification Results
+
+Failure Details page should show:
+
+------------------------------------------------
+Pipeline Failure
+------------------------------------------------
+
+Repository:
+shopping-app
+
+Workflow:
+CI
+
+Job:
+unit-tests
+
+Failure:
+test_invalid_token
+
+Status:
+FAILED
+
+------------------------------------------------
+CLASSIFICATION
+------------------------------------------------
+
+Type:
+CODE_REGRESSION
+
+Confidence:
+96%
+
+------------------------------------------------
+ROOT CAUSE
+------------------------------------------------
+
+Commit:
+ABC123
+
+File:
+auth/service.py
+
+Function:
+validate_token()
+
+Confidence:
+91%
+
+------------------------------------------------
+EVIDENCE
+------------------------------------------------
+
+✓ Stack trace overlap
+✓ Function overlap
+✓ Git diff overlap
+✓ Temporal correlation
+✓ Dependency relationship
+
+------------------------------------------------
+PATCH
+------------------------------------------------
+
+Show diff.
+
+------------------------------------------------
+VERIFICATION
+------------------------------------------------
+
+Build: PASS
+Failing test: PASS
+Related tests: PASS
+
+Status:
+VERIFIED
+
+------------------------------------------------
+
+Make the evidence chain visually clear.
+
+============================================================
+21. GITHUB INTEGRATION
+============================================================
+
+Implement GitHub Actions integration first.
+
+Provide:
+
+.github/workflows/ci.yml
+
+for the demo repository.
+
+The workflow should:
+
+- install dependencies
+- run tests
+- upload test/log information where appropriate
+- fail naturally when a test fails
+
+Implement GitHub webhook handling.
+
+Use environment variables:
+
+GITHUB_TOKEN
+GITHUB_WEBHOOK_SECRET
+GITHUB_REPOSITORY
+
+Do not commit credentials.
+
+============================================================
+22. DEMO REPOSITORY
+============================================================
+
+Create a small demo repository specifically for validating the system.
+
+This is NOT the product.
+
+It is only a controlled test environment.
+
+Include intentionally created scenarios:
+
+1. Genuine code regression
+2. Flaky test
+3. Dependency failure
+4. Configuration failure
+5. CI configuration failure
+6. Unrelated commit
+7. Multi-file dependency regression
+
+Create meaningful Git history.
+
+For example:
+
+Commit 1:
+working implementation
+
+Commit 2:
+feature change
+
+Commit 3:
+unrelated documentation change
+
+Commit 4:
+intentional regression
+
+The system should be able to identify Commit 4.
+
+The demo repository should contain enough history for meaningful attribution.
+
+============================================================
+23. TESTING
+============================================================
+
+Write unit tests for every major service.
+
+Especially test:
+
+- log parsing
+- stack trace extraction
+- flaky detection
+- Git diff analysis
+- Tree-sitter parsing
+- graph construction
+- candidate ranking
+- confidence scoring
+- evidence generation
+- patch scope validation
+- sandbox execution
+
+Write integration tests for:
+
+GitHub event → ingestion → diagnosis
+
+and:
+
+diagnosis → patch → sandbox → verification
+
+Use mocks for external APIs.
+
+Do not make the entire test suite dependent on an external LLM.
+
+============================================================
+24. RESEARCH EVALUATION
+============================================================
+
+The system must produce metrics.
+
+Measure:
+
+1. Failure classification accuracy
+2. Flaky-test classification precision/recall
+3. Top-1 responsible commit accuracy
+4. Top-3 responsible commit accuracy
+5. Confidence calibration
+6. Evidence correctness
+7. Patch success rate
+8. Patch scope violation rate
+9. Verification success rate
+10. End-to-end remediation success
+
+Create an evaluation dataset using the controlled demo repository and
+additional reproducible failure scenarios.
+
+Do not fabricate metrics.
+
+Only report measurements actually obtained by running experiments.
+
+============================================================
+25. BASELINE COMPARISON
+============================================================
+
+Implement a simple baseline for research comparison.
+
+Baseline:
+
+Raw CI failure log
+        ↓
+LLM
+        ↓
+Root cause + fix
+
+Compare against:
+
+Your proposed system:
+
+CI log
++
+Git
++
+AST
++
+Graph
++
+Evidence
++
+Confidence
+        ↓
+LLM
+        ↓
+Constrained patch
+        ↓
+Verification
+
+Compare:
+
+- RCA accuracy
+- responsible commit ranking
+- patch success
+- unsafe patch rate
+
+The baseline must be clearly documented as a research baseline, not as a
+claim that it represents every commercial tool.
+
+============================================================
+26. SECURITY REQUIREMENTS
+============================================================
+
+This system analyzes source code and executes generated patches.
+
+Therefore:
+
+- Never execute generated code directly on the host.
+- Use Docker isolation.
+- Never expose production credentials to the LLM.
+- Never expose secrets from CI logs to the LLM.
+- Redact tokens/passwords/API keys from logs.
+- Never automatically deploy generated patches.
+- Require developer approval before merge.
+- Use least-privilege GitHub tokens.
+- Validate webhook signatures.
+- Validate all external inputs.
+- Restrict patch scope.
+- Add timeouts to sandbox execution.
+- Add resource limits to sandbox containers.
+
+============================================================
+27. OBSERVABILITY
+============================================================
+
+Add structured logs for every major step.
+
+Each diagnosis should have a correlation ID.
+
+Example:
+
+diagnosis_id = RCA-2026-000123
+
+Track:
+
+INGESTION_STARTED
+INGESTION_COMPLETED
+CLASSIFICATION_STARTED
+CLASSIFICATION_COMPLETED
+GRAPH_BUILT
+ATTRIBUTION_COMPLETED
+PATCH_GENERATION_STARTED
+PATCH_GENERATED
+PATCH_REJECTED
+SANDBOX_STARTED
+VERIFICATION_COMPLETED
+
+This is important for debugging the system itself.
+
+============================================================
+28. FAILURE-SAFE DESIGN
+============================================================
+
+The system must fail safely.
+
+Examples:
+
+If logs are incomplete:
+→ return INSUFFICIENT_EVIDENCE
+
+If Git history cannot be retrieved:
+→ do not invent attribution
+
+If AST parsing fails:
+→ mark graph evidence unavailable
+
+If confidence is below threshold:
+→ do not generate automatic patch
+
+If patch modifies unrelated files:
+→ reject
+
+If sandbox fails:
+→ do not mark patch verified
+
+If LLM fails:
+→ preserve diagnosis and report LLM failure
+
+Never fabricate certainty.
+
+============================================================
+29. CONFIDENCE THRESHOLDS
+============================================================
+
+Use configurable thresholds.
+
+Example:
+
+0–49:
+LOW CONFIDENCE
+Do not generate patch.
+
+50–74:
+MEDIUM CONFIDENCE
+Generate explanation but require manual investigation.
+
+75–89:
+HIGH CONFIDENCE
+Patch generation allowed, but verification required.
+
+90–100:
+VERY HIGH CONFIDENCE
+Patch generation allowed, but still requires verification and developer
+approval.
+
+These are initial defaults only. Make them configurable and evaluate them
+experimentally.
+
+============================================================
+30. NO BLACK-BOX CONFIDENCE
+============================================================
+
+Do not produce:
+
+"Confidence = 91%"
+
+without explaining why.
+
+Always expose:
+
+- individual signals
+- individual normalized scores
+- weights
+- weighted contributions
+- final score
+
+Example:
+
+Temporal proximity:
+0.92 × 0.20 = 0.184
+
+File overlap:
+1.00 × 0.20 = 0.200
+
+Function overlap:
+1.00 × 0.20 = 0.200
+
+Stack trace overlap:
+0.95 × 0.20 = 0.190
+
+Dependency relationship:
+0.80 × 0.15 = 0.120
+
+Historical evidence:
+0.60 × 0.05 = 0.030
+
+Final:
+0.924 = 92.4%
+
+This must be visible in the API and UI.
+
+============================================================
+31. DEVELOPMENT STRATEGY
+============================================================
+
+DO NOT attempt to generate the entire application in one giant implementation
+step.
+
+Build incrementally.
+
+Phase 1:
+Project skeleton
+Docker Compose
+PostgreSQL
+FastAPI
+React
+health endpoint
+
+Phase 2:
+GitHub Actions integration
+Webhook
+Log ingestion
+
+Phase 3:
+Failure classification
+Flaky-test detection
+
+Phase 4:
+Git analysis
+Diff
+Blame
+Commit history
+
+Phase 5:
+Tree-sitter
+AST
+Function relationships
+
+Phase 6:
+NetworkX dependency graph
+
+Phase 7:
+Root-cause attribution
+
+Phase 8:
+Confidence scoring
+Evidence chain
+
+Phase 9:
+LLM integration
+
+Phase 10:
+Patch scope validation
+
+Phase 11:
+Docker sandbox
+
+Phase 12:
+Verification
+
+Phase 13:
+Fix PR generation
+
+Phase 14:
+Dashboard
+
+Phase 15:
+Research evaluation
+
+After each phase:
+- run tests
+- update documentation
+- verify functionality
+- do not break previous phases
+
+============================================================
+32. IMPORTANT CODING RULES
+============================================================
+
+Write production-quality code.
+
+Use:
+
+- type hints
+- Pydantic models
+- dependency injection
+- clear interfaces
+- service boundaries
+- error handling
+- structured logging
+- unit tests
+- integration tests
+- docstrings for complex algorithms
+
+Avoid:
+
+- giant files
+- hard-coded credentials
+- hard-coded repository names
+- hard-coded commit SHAs
+- global mutable state
+- LLM calls directly inside API routes
+- business logic inside React components
+- arbitrary confidence values
+- fake test results
+
+============================================================
+33. DOCUMENTATION
+============================================================
+
+Create:
+
+README.md
+
+containing:
+
+1. Project objective
+2. Architecture
+3. Technology stack
+4. Setup instructions
+5. Environment variables
+6. Running backend
+7. Running frontend
+8. Running PostgreSQL
+9. Running demo repository
+10. Connecting GitHub
+11. Running a failure diagnosis
+12. Generating a patch
+13. Running verification
+14. Research evaluation
+
+Also create:
+
+docs/architecture.md
+docs/research.md
+docs/security.md
+docs/api.md
+
+Explain WHY each major module exists.
+
+============================================================
+34. EXPECTED END-TO-END DEMO
+============================================================
+
+The final system must demonstrate this exact scenario:
+
+1. Developer pushes a change.
+2. GitHub Actions runs.
+3. A test fails.
+4. GitHub sends failure information to the backend.
+5. Backend retrieves logs and metadata.
+6. System extracts the failure.
+7. System checks whether the test is flaky.
+8. System determines it is likely a genuine regression.
+9. Git history is analyzed.
+10. Stack trace is analyzed.
+11. Tree-sitter analyzes relevant source.
+12. NetworkX dependency graph is constructed.
+13. Candidate commits are ranked.
+14. Confidence score is calculated.
+15. Evidence chain is generated.
+16. UI displays the diagnosis.
+17. LLM receives only the relevant evidence and code.
+18. LLM generates a minimal patch.
+19. Patch scope is validated.
+20. Patch is applied in a Docker sandbox.
+21. Failing test is executed.
+22. Related tests are executed.
+23. Build is executed.
+24. If all required checks pass, patch is marked VERIFIED.
+25. System creates a proposed fix PR.
+26. Developer reviews it.
+27. No automatic production deployment occurs.
+
+============================================================
+35. IMPORTANT FINAL REQUIREMENT
+============================================================
+
+Before writing large amounts of code:
+
+1. Inspect the current repository.
+2. Determine what already exists.
+3. Create a concise implementation plan.
+4. Create the architecture documentation.
+5. Create the project skeleton.
+6. Implement Phase 1.
+7. Run tests.
+8. Only then continue to Phase 2.
+
+Do not silently skip phases.
+
+At every phase, tell me:
+
+- what you implemented
+- which files changed
+- why they changed
+- how to run it
+- how to test it
+- what remains
+
+Do not claim a feature is complete until it has actually been implemented and
+tested.
+
+Do not fabricate GitHub API responses, CI failures, LLM outputs, confidence
+scores, or verification results.
+
+The final system should be a real working research prototype, not a UI mockup
+or a collection of disconnected scripts.
+
+The architecture should be extensible to GitLab CI, Jenkins, AWS, Vercel,
+Render, etc., but implement GitHub Actions first.
+
+Most importantly:
+
+THE SYSTEM MUST BE EVIDENCE-FIRST, NOT LLM-FIRST.
+
+The LLM is responsible for patch generation and natural-language assistance.
+
+The deterministic/program-analysis components are responsible for collecting
+evidence, building relationships, ranking candidates, enforcing scope, and
+verifying the generated fix.

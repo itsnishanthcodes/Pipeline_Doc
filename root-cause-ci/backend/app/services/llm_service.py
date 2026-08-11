@@ -32,8 +32,12 @@ async def generate_llm_summary(
 ) -> str:
     settings = get_settings()
 
-    if not settings.llm_api_key:
-        return fallback_summary(category, explanation, repo, run_id)
+    if not settings.llm_api_key or not settings.llm_api_key.strip():
+        return (
+            f"Pipeline #{run_id} in {repo} failed with category '{category}'. "
+            f"{explanation}\n\n"
+            f"_(Note: LLM AI summary disabled because LLM_API_KEY is not set in your .env file.)_"
+        )
 
     relevant_log = extract_relevant_log(failure_log)
     changed_files_str = ", ".join(changed_files) if changed_files else "unknown"

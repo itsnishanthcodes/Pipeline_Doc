@@ -6,6 +6,7 @@ import { HeroSection } from './components/HeroSection';
 import { MethodologyFlow } from './components/MethodologyFlow';
 import { Navbar } from './components/Navbar';
 import { ProblemObjectives } from './components/ProblemObjectives';
+import { ProfileModal } from './components/ProfileModal';
 import { TeamFooter } from './components/TeamFooter';
 import { fetchHealth } from './services/api';
 import type { UserAuthData } from './services/authApi';
@@ -21,6 +22,7 @@ function App() {
 
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
+  const [profileOpen, setProfileOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserAuthData | null>(null);
 
   useEffect(() => {
@@ -57,6 +59,7 @@ function App() {
         onOpenAuth={handleOpenAuth}
         currentUser={currentUser}
         onLogout={() => setCurrentUser(null)}
+        onOpenProfile={() => setProfileOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
@@ -67,6 +70,7 @@ function App() {
           <DashboardWorkspace
             user={currentUser}
             onLogout={() => setCurrentUser(null)}
+            onOpenProfile={() => setProfileOpen(true)}
           />
         ) : (
           /* Render Landing Page & Project Showcase when Logged Out */
@@ -90,6 +94,15 @@ function App() {
         onSuccess={(user) => setCurrentUser(user)}
         initialMode={authMode}
       />
+
+      {currentUser && (
+        <ProfileModal
+          isOpen={profileOpen}
+          onClose={() => setProfileOpen(false)}
+          currentUser={currentUser}
+          onUpdateUser={(updated) => setCurrentUser(updated)}
+        />
+      )}
     </div>
   );
 }
