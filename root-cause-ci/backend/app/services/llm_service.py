@@ -21,42 +21,57 @@ def fallback_summary(category: str, explanation: str, repo: str, run_id: int) ->
     )
 
 
-async def generate_llm_summary(
+# Dummy comment for uvicorn hot-reload
+import json
+
+async def generate_constrained_patch(
     failure_log: str,
-    category: str,
-    explanation: str,
+    evidence_chain: list[dict],
     repo: str,
     run_id: int,
-    pr_title: Optional[str] = None,
-    changed_files: Optional[list[str]] = None,
-) -> str:
+    changed_files: list[str],
+) -> dict:
+    """
+    Generates a structured JSON patch based on deterministic evidence.
+    """
     settings = get_settings()
 
     if not settings.llm_api_key or not settings.llm_api_key.strip():
-        return (
-            f"Pipeline #{run_id} in {repo} failed with category '{category}'. "
-            f"{explanation}\n\n"
-            f"_(Note: LLM AI summary disabled because LLM_API_KEY is not set in your .env file.)_"
-        )
+        return {
+            "summary": "LLM_API_KEY not set. Cannot generate patch.",
+            "patch": None,
+            "modified_files": []
+        }
 
     relevant_log = extract_relevant_log(failure_log)
-    changed_files_str = ", ".join(changed_files) if changed_files else "unknown"
-    pr_str = pr_title if pr_title else "Direct push / unknown PR"
+    changed_files_str = ", ".join(changed_files) if changed_files else "none"
+    
+    evidence_str = ""
+    for idx, ev in enumerate(evidence_chain):
+        evidence_str += f"{idx+1}. {ev['signal']}: {ev['explanation']} (Score: {ev['score_contribution']})\n"
 
-    prompt = f"""You are an expert DevOps engineer analyzing a CI/CD pipeline failure.
+    prompt = f"""You are an expert software engineer fixing a CI/CD pipeline failure.
+You MUST output your response in strict JSON format.
 
 Evidence:
 - Repository: {repo} (Run #{run_id})
-- Associated PR/Branch: {pr_str}
-- Category: {category}
-- Explanation: {explanation}
-- Changed Files: {changed_files_str}
-- Key Error Lines from Job Log:
+- Allowed Scope (Changed Files): {changed_files_str}
+- Deterministic Evidence Chain:
+{evidence_str}
+
+Key Error Lines from Job Log:
 {relevant_log}
 
-Write a concise 3-5 sentence root cause summary focused on the actual error.
-Explain clearly what went wrong and suggest the immediate fix or next action.
-Do not invent details."""
+Your task is to generate a fix.
+Constraints:
+1. Try to ONLY modify files explicitly listed in the Allowed Scope. However, if the Allowed Scope is 'none', you are authorized to propose a patch for the file mentioned in the error logs.
+2. Return a strict JSON object with this exact schema:
+{{
+  "summary": "Concise root cause summary based on evidence",
+  "patch": "The unified diff format patch, or null if no patch can be safely generated",
+  "modified_files": ["list", "of", "files", "modified"]
+}}
+"""
 
     headers = {
         "Authorization": f"Bearer {settings.llm_api_key}",
@@ -65,18 +80,21 @@ Do not invent details."""
     body = {
         "model": settings.llm_model,
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 400,
-        "temperature": 0.3,
+        "max_tokens": 1500,
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"}
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=45.0) as client:
             response = await client.post(settings.llm_api_url, headers=headers, json=body)
             response.raise_for_status()
             data = response.json()
-            return data["choices"][0]["message"]["content"].strip()
+            content = data["choices"][0]["message"]["content"].strip()
+            return json.loads(content)
     except Exception as e:
-        return (
-            f"{fallback_summary(category, explanation, repo, run_id)}\n\n"
-            f"_(LLM narrative fallback: {e})_"
-        )
+        return {
+            "summary": f"Failed to generate fix: {e}",
+            "patch": None,
+            "modified_files": []
+        }

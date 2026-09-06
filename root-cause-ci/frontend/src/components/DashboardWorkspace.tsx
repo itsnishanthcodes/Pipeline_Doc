@@ -414,6 +414,14 @@ export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, on
                       {ghResult.comment_posted ? 'YES' : 'NO'}
                     </strong>
                   </div>
+                  {ghResult.confidence_score !== undefined && (
+                    <div className="mini-card">
+                      <span className="label">Confidence Score</span>
+                      <strong className="text-indigo" style={{ fontSize: '1.2rem' }}>
+                        {(ghResult.confidence_score * 100).toFixed(1)}%
+                      </strong>
+                    </div>
+                  )}
                   {ghResult.author && (
                     <div className="mini-card">
                       <span className="label">Author Attribution</span>
@@ -423,36 +431,71 @@ export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, on
                 </div>
               )}
 
+              {/* Evidence Chain UI */}
+              {ghResult.evidence_chain && ghResult.evidence_chain.length > 0 && (
+                <div className="mini-card" style={{ marginTop: '15px', background: 'rgba(16, 185, 129, 0.05)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
+                  <span className="label" style={{ color: '#10b981', fontWeight: 600, fontSize: '1rem', marginBottom: '10px', display: 'block' }}>🔍 Deterministic Evidence Chain</span>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.95rem' }}>
+                    {ghResult.evidence_chain.map((ev: any, idx: number) => (
+                      <li key={idx} style={{ marginBottom: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                        <span style={{ color: '#10b981' }}>✓</span>
+                        <div>
+                          <strong>{ev.signal}:</strong> <span style={{ color: '#cbd5e1' }}>{ev.explanation}</span>
+                          <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>Score Contribution: {(ev.score_contribution * 100).toFixed(1)}%</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* AI Narrative */}
               {ghResult.llm_summary && (
                 <div className="mini-card" style={{ marginTop: '15px', background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.3)' }}>
-                  <span className="label" style={{ color: '#818cf8', fontWeight: 600 }}>🤖 Groq LLM Narrative Summary</span>
+                  <span className="label" style={{ color: '#818cf8', fontWeight: 600 }}>🤖 Constrained AI Root Cause Summary</span>
                   <p style={{ marginTop: '8px', fontSize: '0.95rem', lineHeight: '1.5' }}>
                     {ghResult.llm_summary}
                   </p>
                 </div>
               )}
 
-              {ghResult.report_preview && (
-                <div className="code-snippet-box">
-                  <div className="snippet-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Generated Report Preview</span>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      style={{ padding: '4px 10px', fontSize: '0.8rem' }}
-                      onClick={() => {
-                        navigator.clipboard.writeText(ghResult.report_preview);
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 2000);
-                      }}
-                    >
-                      {copied ? '✅ Copied to Clipboard!' : '📋 Copy Report'}
-                    </button>
+              {/* Generated Patch */}
+              {ghResult.patch_code && (
+                <div className="code-snippet-box" style={{ marginTop: '15px', borderColor: 'rgba(245, 158, 11, 0.4)' }}>
+                  <div className="snippet-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(245, 158, 11, 0.15)' }}>
+                    <span style={{ color: '#fcd34d', fontWeight: 'bold' }}>🛠️ Proposed Fix (Constrained Scope)</span>
                   </div>
-                  <pre className="error-terminal">
-                    {ghResult.report_preview}
+                  <pre className="error-terminal" style={{ color: '#e2e8f0' }}>
+                    {ghResult.patch_code}
                   </pre>
                 </div>
+              )}
+
+              {/* Raw Report Preview Toggle */}
+              {ghResult.report_preview && (
+                <details style={{ marginTop: '20px' }}>
+                  <summary style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '0.9rem' }}>Show Raw Markdown Report</summary>
+                  <div className="code-snippet-box" style={{ marginTop: '10px' }}>
+                    <div className="snippet-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Generated Report Preview</span>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                        onClick={() => {
+                          navigator.clipboard.writeText(ghResult.report_preview);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                      >
+                        {copied ? '✅ Copied to Clipboard!' : '📋 Copy Report'}
+                      </button>
+                    </div>
+                    <pre className="error-terminal">
+                      {ghResult.report_preview}
+                    </pre>
+                  </div>
+                </details>
               )}
             </div>
           )}

@@ -50,6 +50,11 @@ class GitHubClient:
         files = await self._get(f"/repos/{repo}/pulls/{pull_number}/files")
         return [f["filename"] for f in files]
 
+    async def get_commit_changes(self, repo: str, commit_sha: str) -> List[str]:
+        commit_data = await self._get(f"/repos/{repo}/commits/{commit_sha}")
+        files = commit_data.get("files", [])
+        return [f["filename"] for f in files]
+
     async def post_pr_comment(self, repo: str, pull_number: int, comment: str) -> dict:
         return await self._post(f"/repos/{repo}/issues/{pull_number}/comments", {"body": comment})
 
@@ -77,4 +82,15 @@ class GitHubClient:
                 return runs[0]
             return None
         except Exception:
+            return None
+
+    async def get_file_content(self, repo: str, file_path: str, ref: str) -> str | None:
+        """Fetch raw file content from GitHub for a specific commit ref."""
+        try:
+            import base64
+            data = await self._get(f"/repos/{repo}/contents/{file_path}?ref={ref}")
+            if data.get("encoding") == "base64":
+                return base64.b64decode(data["content"]).decode("utf-8", errors="ignore")
+            return None
+        except Exception as e:
             return None
