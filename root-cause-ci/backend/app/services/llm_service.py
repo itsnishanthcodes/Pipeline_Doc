@@ -21,7 +21,7 @@ def fallback_summary(category: str, explanation: str, repo: str, run_id: int) ->
     )
 
 
-# Dummy comment for uvicorn hot-reload
+# Dummy comment to trigger hot-reload and clear lru_cache
 import json
 
 async def generate_constrained_patch(
@@ -68,7 +68,7 @@ Constraints:
 2. Return a strict JSON object with this exact schema:
 {{
   "summary": "Concise root cause summary based on evidence",
-  "patch": "The unified diff format patch, or null if no patch can be safely generated",
+  "patch": "The COMPLETE full file content with the bug fixed (do NOT use diff format, return the whole fixed file), or null if no patch can be safely generated",
   "modified_files": ["list", "of", "files", "modified"]
 }}
 """

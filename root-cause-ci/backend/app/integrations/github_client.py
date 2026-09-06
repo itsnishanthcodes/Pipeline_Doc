@@ -94,3 +94,51 @@ class GitHubClient:
             return None
         except Exception as e:
             return None
+
+    async def create_branch(self, repo: str, branch_name: str, sha: str) -> dict:
+        """Create a new branch from a specific commit SHA."""
+        data = {
+            "ref": f"refs/heads/{branch_name}",
+            "sha": sha
+        }
+        return await self._post(f"/repos/{repo}/git/refs", data)
+
+    async def create_or_update_file(self, repo: str, file_path: str, message: str, content: str, branch: str) -> dict:
+        """Create or update a file in a branch."""
+        import base64
+        # Get existing file SHA if it exists
+        file_sha = None
+        try:
+            existing = await self._get(f"/repos/{repo}/contents/{file_path}?ref={branch}")
+            file_sha = existing.get("sha")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code != 404:
+                raise
+
+        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+        data = {
+            "message": message,
+            "content": encoded_content,
+            "branch": branch
+        }
+        if file_sha:
+            data["sha"] = file_sha
+            
+        async with httpx.AsyncClient() as client:
+            response = await client.put(
+                f"{self.base_url}/repos/{repo}/contents/{file_path}",
+                headers=self.headers,
+                json=data
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def create_pull_request(self, repo: str, title: str, body: str, head: str, base: str) -> dict:
+        """Create a new pull request."""
+        data = {
+            "title": title,
+            "body": body,
+            "head": head,
+            "base": base
+        }
+        return await self._post(f"/repos/{repo}/pulls", data)

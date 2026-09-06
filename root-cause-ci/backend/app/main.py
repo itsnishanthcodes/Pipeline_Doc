@@ -7,6 +7,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.webhooks import router as webhooks_router
 from app.api.routes.analysis import router as analysis_router
 from app.api.routes.repositories import router as repositories_router
+from app.api.routes.patches import router as patches_router
 from app.core.config import get_settings
 from app.core.database import init_db
 from app.core.logging import setup_logging
@@ -43,6 +44,7 @@ app.include_router(webhooks_router)
 app.include_router(auth_router)
 app.include_router(analysis_router)
 app.include_router(repositories_router)
+app.include_router(patches_router)
 
 
 @app.get("/", tags=["root"])
