@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { postGitHubWebhook, postGitHubAnalysis, fetchAnalysisHistory } from '../services/api';
+import { postGitHubWebhook, postGitHubAnalysis, fetchAnalysisHistory, fetchRepositories } from '../services/api';
 import type { UserAuthData } from '../services/authApi';
 
 interface DashboardWorkspaceProps {
@@ -9,11 +9,15 @@ interface DashboardWorkspaceProps {
 }
 
 export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, onLogout, onOpenProfile }) => {
-  const [activeTab, setActiveTab] = useState<'github_analysis' | 'runs'>('github_analysis');
+  const [activeTab, setActiveTab] = useState<'github_analysis' | 'runs' | 'repositories'>('repositories');
 
   // Real state populated purely from live FastAPI backend webhook responses
   const [ingestedRuns, setIngestedRuns] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  
+  // Repositories state
+  const [repositories, setRepositories] = useState<any[]>([]);
+  const [loadingRepos, setLoadingRepos] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +65,13 @@ export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, on
         setIngestedRuns(formatted);
       }
     });
+
+    setLoadingRepos(true);
+    fetchRepositories().then((data) => {
+      if (data && data.repositories) {
+        setRepositories(data.repositories);
+      }
+    }).catch(console.error).finally(() => setLoadingRepos(false));
   }, []);
 
   const handleGitHubAnalysis = async (e: React.FormEvent) => {
@@ -174,6 +185,12 @@ export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, on
       {/* Tabs */}
       <div className="dashboard-nav-tabs">
         <button
+          className={`dash-tab ${activeTab === 'repositories' ? 'active' : ''}`}
+          onClick={() => setActiveTab('repositories')}
+        >
+          📚 Repositories
+        </button>
+        <button
           className={`dash-tab ${activeTab === 'github_analysis' ? 'active' : ''}`}
           onClick={() => setActiveTab('github_analysis')}
         >
@@ -188,6 +205,54 @@ export const DashboardWorkspace: React.FC<DashboardWorkspaceProps> = ({ user, on
       </div>
 
 
+
+      {/* Tab 1: Repositories */}
+      {activeTab === 'repositories' && (
+        <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr', padding: '0 20px' }}>
+          <div className="glass-card" style={{ width: '100%' }}>
+            <h3>Connected GitHub Repositories (CI/CD Enabled)</h3>
+            <p className="subtitle">These repositories have GitHub Actions workflows configured.</p>
+            
+            {loadingRepos ? (
+              <p style={{ marginTop: '20px' }}>Loading repositories...</p>
+            ) : repositories.length === 0 ? (
+              <p className="muted-text" style={{ marginTop: '20px' }}>No repositories with GitHub Actions found.</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginTop: '20px' }}>
+                {repositories.map(repo => (
+                  <div key={repo.id} className="run-item-card" style={{ padding: '20px', cursor: 'default' }}>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '1.1rem', color: '#fff' }}>{repo.name}</h4>
+                    <p style={{ fontSize: '0.9rem', color: '#94a3b8', margin: '0 0 15px 0' }}>{repo.full_name}</p>
+                    {repo.description && <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '15px' }}>{repo.description}</p>}
+                    
+                    {repo.latest_run_id && (
+                      <div style={{ marginBottom: '15px', fontSize: '0.85rem' }}>
+                        <span className="label" style={{ color: '#818cf8', display: 'block', marginBottom: '5px' }}>Latest Workflow Run:</span>
+                        <span>#{repo.latest_run_id} - <strong className={repo.latest_run_conclusion === 'success' ? 'text-emerald' : repo.latest_run_conclusion === 'failure' ? 'text-red' : 'text-cyan'}>{repo.latest_run_conclusion?.toUpperCase() || repo.latest_run_status?.toUpperCase() || 'UNKNOWN'}</strong></span>
+                      </div>
+                    )}
+                    
+                    <button 
+                      className="btn-secondary" 
+                      onClick={() => {
+                        setGhRepo(repo.full_name);
+                        if (repo.latest_run_id) {
+                          setGhRunId(repo.latest_run_id.toString());
+                        }
+                        setActiveTab('github_analysis');
+                      }}
+                      style={{ width: '100%', display: 'flex', justifyContent: 'center', opacity: repo.latest_run_id ? 1 : 0.5 }}
+                      disabled={!repo.latest_run_id}
+                    >
+                      {repo.latest_run_id ? 'Analyze Latest Pipeline' : 'No Runs Available'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Tab 2: Live Ingested Backend Results */}
       {activeTab === 'runs' && (

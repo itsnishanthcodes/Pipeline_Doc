@@ -86,3 +86,19 @@ export async function fetchAnalysisHistory() {
 
   return response.json();
 }
+
+export async function fetchRepositories() {
+  const token = localStorage.getItem('access_token');
+  const response = await fetch(`${baseUrl}/repositories`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: 'Failed to fetch repositories' }));
+    throw new Error(err.detail || 'Failed to fetch repositories');
+  }
+
+  return response.json();
+}

@@ -52,3 +52,29 @@ class GitHubClient:
 
     async def post_pr_comment(self, repo: str, pull_number: int, comment: str) -> dict:
         return await self._post(f"/repos/{repo}/issues/{pull_number}/comments", {"body": comment})
+
+    async def get_user_repositories(self) -> List[dict]:
+        """Fetch repositories for the authenticated user."""
+        try:
+            return await self._get("/user/repos?sort=updated&per_page=100")
+        except Exception:
+            return []
+
+    async def check_has_workflows(self, repo_full_name: str) -> bool:
+        """Check if a repository has any GitHub Actions workflows."""
+        try:
+            data = await self._get(f"/repos/{repo_full_name}/actions/workflows")
+            return data.get("total_count", 0) > 0
+        except Exception:
+            return False
+
+    async def get_latest_workflow_run(self, repo_full_name: str) -> dict | None:
+        """Fetch the most recent workflow run for a repository."""
+        try:
+            data = await self._get(f"/repos/{repo_full_name}/actions/runs?per_page=1")
+            runs = data.get("workflow_runs", [])
+            if runs:
+                return runs[0]
+            return None
+        except Exception:
+            return None
