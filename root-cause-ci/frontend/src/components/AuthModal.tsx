@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { loginUser, registerUser, UserAuthData, verifyGitHubCredentials } from '../services/authApi';
+import { loginUser, registerUser, saveAuthSession, saveAuthUser, UserAuthData, verifyGitHubCredentials } from '../services/authApi';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -82,11 +82,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           github_token: githubToken || undefined,
           role,
         });
-        localStorage.setItem('access_token', response.access_token);
+        saveAuthSession(response.access_token);
+        saveAuthUser(response.user);
         onSuccess(response.user);
       } else {
         const response = await loginUser({ email, password });
-        localStorage.setItem('access_token', response.access_token);
+        saveAuthSession(response.access_token);
+        saveAuthUser(response.user);
         onSuccess(response.user);
       }
       onClose();

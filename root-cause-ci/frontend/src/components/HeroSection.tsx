@@ -14,48 +14,29 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, scrollY 
       />
       
       <div className="hero-content">
-        <div className="hero-badge animate-fade-down">
-          <span>Enterprise Reliability Engine</span>
-          <span className="badge-dot" />
-          <span>LLM-Driven Diagnostic Loop</span>
-        </div>
+        <div className="hero-kicker animate-fade-down">For teams investigating failed GitHub Actions runs</div>
 
         <h1 className="hero-title animate-title">
-          Root Cause Driven <br />
-          <span className="gradient-text">CI/CD Pipeline Automation</span>
+          A clearer way to review a failed CI run
         </h1>
 
         <p className="hero-description animate-fade-up">
-          Evidence-first CI/CD failure diagnosis and verified remediation.
-          Automated triage separating <strong>Flaky</strong> vs <strong>Real</strong> failures, 
-          LLM root cause analysis, and sandboxed fix validation before code merge.
+          Root Cause CI collects the run log, classifies the failure, and brings the relevant
+          commit and pull request context into one review. Start with the evidence, then decide what to change.
         </p>
 
         <div className="hero-cta-group animate-fade-up-delay">
           <button className="get-started-btn pulse-glow" onClick={onGetStarted}>
-            <span>Get Started</span>
+            <span>Open the workspace</span>
             <span className="btn-icon">→</span>
           </button>
           
           <a href="#architecture" className="btn-outline">
-            Explore Architecture
+            See the workflow
           </a>
         </div>
 
-        <div className="hero-stats-row">
-          <div className="stat-card glass-card">
-            <span className="stat-number gradient-text">&ge; 85%</span>
-            <span className="stat-label">Classification Accuracy</span>
-          </div>
-          <div className="stat-card glass-card">
-            <span className="stat-number gradient-text">&lt; 5 min</span>
-            <span className="stat-label">Mean Time To Diagnosis (90%+ reduction)</span>
-          </div>
-          <div className="stat-card glass-card">
-            <span className="stat-number gradient-text">30-50</span>
-            <span className="stat-label">Benchmark Test Pipelines</span>
-          </div>
-        </div>
+        <div className="hero-note"><span className="status-dot" /> Connect a GitHub account to inspect your own runs</div>
       </div>
     </section>
   );

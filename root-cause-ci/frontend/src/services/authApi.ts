@@ -1,5 +1,33 @@
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
+const TOKEN_KEY = 'access_token';
+
+export function saveAuthSession(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function saveAuthUser(user: UserAuthData): void {
+  localStorage.setItem('auth_user', JSON.stringify(user));
+}
+
+export function clearAuthSession(): void {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('auth_user');
+}
+
+export function getAuthToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function getStoredAuthUser(): UserAuthData | null {
+  try {
+    const storedUser = localStorage.getItem('auth_user');
+    return storedUser ? (JSON.parse(storedUser) as UserAuthData) : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface UserAuthData {
   id: number;
   full_name: string;
@@ -12,6 +40,7 @@ export interface UserAuthData {
 export interface AuthResponse {
   access_token: string;
   token_type: string;
+  expires_in: number;
   user: UserAuthData;
 }
 

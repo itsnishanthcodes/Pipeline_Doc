@@ -1,8 +1,10 @@
 import React from 'react';
+import { LogOut, Moon, Settings, Sun, UserCircle } from 'lucide-react';
+import type { UserAuthData } from '../services/authApi';
 
 interface NavbarProps {
   onOpenAuth: (mode: 'login' | 'register') => void;
-  currentUser: any;
+  currentUser: UserAuthData | null;
   onLogout: () => void;
   onOpenProfile?: () => void;
   theme: 'dark' | 'light';
@@ -21,43 +23,42 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="navbar-header glass-nav">
       <div className="nav-container">
         <div className="brand-group">
-          <div className="brand-logo">
-            <span className="logo-spark">⚡</span>
+          <div className="brand-logo" aria-hidden="true">
+            <span className="logo-mark">rc</span>
           </div>
           <div>
             <div className="brand-name">Root Cause CI</div>
-            <div className="brand-tagline">Automated Intelligence Platform</div>
+            <div className="brand-tagline">CI failure review</div>
           </div>
         </div>
 
-        <nav className="nav-links">
-          <a href="#overview">Overview</a>
-          <a href="#architecture">Architecture</a>
-          <a href="#innovations">Capabilities</a>
-          <a href="#metrics">Metrics</a>
-        </nav>
+        {!currentUser && (
+          <nav className="nav-links" aria-label="Main navigation">
+            <a href="#overview">Overview</a>
+            <a href="#workflow">Workflow</a>
+            <a href="#status">Status</a>
+          </nav>
+        )}
 
         <div className="nav-actions">
-          <button className="theme-toggle-btn" onClick={onToggleTheme} title="Toggle Light / Dark Theme">
-            {theme === 'dark' ? '☀️' : '🌙'}
+          <button className="theme-toggle-btn" onClick={onToggleTheme} title="Toggle theme" aria-label="Toggle theme">
+            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
           </button>
-          
-          <span className="phase-badge pulse">Production Prototype</span>
 
           {currentUser ? (
-            <div className="user-menu" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="user-menu">
               <button 
                 className="user-greeting" 
                 onClick={onOpenProfile}
-                title="Manage Profile & GitHub Credentials"
-                style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '0.35rem 0.75rem', borderRadius: '20px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}
+                title="Open profile settings"
               >
-                <span>👋</span>
+                <UserCircle size={17} />
                 <span>{currentUser.full_name}</span>
-                <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>⚙️ Profile</span>
+                <Settings size={14} />
               </button>
-              <button className="btn-secondary" onClick={onLogout}>
-                Logout
+              <button className="btn-secondary nav-logout" onClick={onLogout} title="Sign out">
+                <LogOut size={15} />
+                <span>Sign out</span>
               </button>
             </div>
           ) : (

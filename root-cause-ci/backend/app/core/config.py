@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     github_token: str | None = Field(default=None, alias="GITHUB_TOKEN")
     github_repository: str | None = Field(default=None, alias="GITHUB_REPOSITORY")
     github_webhook_secret: str | None = Field(default=None, alias="GITHUB_WEBHOOK_SECRET")
+    auth_secret: str = Field(default="change-this-auth-secret", alias="AUTH_SECRET")
+    auth_token_expire_minutes: int = Field(default=60, alias="AUTH_TOKEN_EXPIRE_MINUTES")
     llm_api_key: str | None = Field(default=None, alias="LLM_API_KEY")
     llm_model: str = Field(default="llama-3.1-8b-instant", alias="LLM_MODEL")
     llm_api_url: str = Field(default="https://api.groq.com/openai/v1/chat/completions", alias="LLM_API_URL")

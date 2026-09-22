@@ -8,37 +8,17 @@ interface EvaluationMetricsProps {
 
 export const EvaluationMetrics: React.FC<EvaluationMetricsProps> = ({ health, error }) => {
   return (
-    <section className="section-container" id="metrics">
+    <section className="section-container" id="status">
       <div className="section-header">
-        <span className="section-subtitle">Evaluation & Metrics</span>
-        <h2 className="section-title">Measurable Outcomes & Live Status</h2>
-      </div>
-
-      <div className="metrics-grid">
-        <div className="metric-box glass-card">
-          <div className="metric-header">Classification Accuracy</div>
-          <div className="metric-value gradient-text">&ge; 85%</div>
-          <p className="metric-desc">Precision & recall separation of Flaky vs Real pipeline failures.</p>
-        </div>
-
-        <div className="metric-box glass-card">
-          <div className="metric-header">Diagnostic Efficiency (MTTD)</div>
-          <div className="metric-value gradient-text">&lt; 5 mins</div>
-          <p className="metric-desc">90%+ reduction in Mean Time To Diagnosis per failure.</p>
-        </div>
-
-        <div className="metric-box glass-card">
-          <div className="metric-header">Benchmark Coverage</div>
-          <div className="metric-value gradient-text">30 - 50</div>
-          <p className="metric-desc">Open-source pipeline failure evaluation cases.</p>
-        </div>
+        <span className="section-subtitle">Connection status</span>
+        <h2 className="section-title">The service behind the workspace</h2>
       </div>
 
       <div className="glass-card live-status-panel">
         <div className="status-panel-header">
           <div>
-            <h3>Live Backend System Connection</h3>
-            <p className="subtitle">Real-time status from FastAPI backend server endpoint</p>
+            <h3>Backend connection</h3>
+            <p className="subtitle">The status below comes from the running FastAPI service.</p>
           </div>
           <div className={`status-indicator ${health ? 'online' : 'offline'}`}>
             <span className="dot" />
@@ -67,7 +47,7 @@ export const EvaluationMetrics: React.FC<EvaluationMetricsProps> = ({ health, er
           </div>
         ) : (
           <div className="error-box">
-            {error || 'Attempting connection to FastAPI server at http://localhost:8000/health...'}
+            {error || 'Checking the backend connection...'}
           </div>
         )}
       </div>

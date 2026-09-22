@@ -5,33 +5,33 @@ export const ProblemObjectives: React.FC = () => {
     <section className="section-container">
       <div className="two-col-grid">
         <div className="glass-card info-panel border-red">
-          <div className="panel-badge red">Problem Statement</div>
-          <h3>The Challenge in Modern CI/CD</h3>
+          <div className="panel-badge red">Before the review</div>
+          <h3>What usually gets lost in a failed run</h3>
           <ul className="custom-list">
             <li>
-              <strong>Frequent CI Failures:</strong> Organizations suffer from flaky tests, config drift, and regressions.
+              <strong>Too much log output:</strong> The useful line is often buried inside a long build or test log.
             </li>
             <li>
-              <strong>Log Analysis Overload:</strong> Modern microservices generate massive multi-stage build logs.
+              <strong>Context is split:</strong> The run, pull request, changed files, and commit history live in different places.
             </li>
             <li>
-              <strong>High MTTR & Delayed Releases:</strong> Manual RCA by engineers is slow, costly, and distracts from feature delivery.
+              <strong>Diagnosis becomes guesswork:</strong> Without a clear trail, engineers repeat the same investigation by hand.
             </li>
           </ul>
         </div>
 
         <div className="glass-card info-panel border-cyan">
-          <div className="panel-badge cyan">Objectives & Innovation</div>
-          <h3>LLM Triage & Sandbox Solution</h3>
+          <div className="panel-badge cyan">What this workspace does</div>
+          <h3>Bring the relevant evidence together</h3>
           <ul className="custom-list">
             <li>
-              <strong>Triage-First Design:</strong> Flaky vs Real classification gates expensive LLM reasoning.
+              <strong>Start with rules:</strong> Deterministic classification gives the report a traceable first conclusion.
             </li>
             <li>
-              <strong>Structured Context:</strong> Avoids context rot by stripping raw log noise before LLM analysis.
+              <strong>Link code context:</strong> Changed files, functions, commits, and pull requests stay beside the failure.
             </li>
             <li>
-              <strong>Deterministic Sandbox Rerun:</strong> Never merges fixes based on LLM confidence alone — only after verified sandbox runs pass.
+              <strong>Keep a human in the loop:</strong> The report suggests where to look; it does not make a merge decision for you.
             </li>
           </ul>
         </div>

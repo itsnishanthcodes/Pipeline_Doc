@@ -9,6 +9,7 @@ import { ProblemObjectives } from './components/ProblemObjectives';
 import { ProfileModal } from './components/ProfileModal';
 import { TeamFooter } from './components/TeamFooter';
 import { fetchHealth } from './services/api';
+import { clearAuthSession, fetchProfile, getAuthToken, getStoredAuthUser, saveAuthUser } from './services/authApi';
 import type { UserAuthData } from './services/authApi';
 import type { HealthResponse } from './types/health';
 
@@ -23,7 +24,27 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
   const [profileOpen, setProfileOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<UserAuthData | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserAuthData | null>(() => getStoredAuthUser());
+  const [authLoading, setAuthLoading] = useState(() => Boolean(getAuthToken()));
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) {
+      setAuthLoading(false);
+      return;
+    }
+
+    fetchProfile(token)
+      .then((user) => {
+        saveAuthUser(user);
+        setCurrentUser(user);
+      })
+      .catch(() => {
+        clearAuthSession();
+        setCurrentUser(null);
+      })
+      .finally(() => setAuthLoading(false));
+  }, []);
 
   useEffect(() => {
     // Set theme on root HTML element
@@ -53,23 +74,32 @@ function App() {
     setAuthOpen(true);
   };
 
+  const handleLogout = () => {
+    clearAuthSession();
+    setCurrentUser(null);
+    setAuthLoading(false);
+    setProfileOpen(false);
+  };
+
   return (
     <div className="main-wrapper">
       <Navbar
         onOpenAuth={handleOpenAuth}
         currentUser={currentUser}
-        onLogout={() => setCurrentUser(null)}
+        onLogout={handleLogout}
         onOpenProfile={() => setProfileOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
 
       <main>
-        {currentUser ? (
+        {authLoading && !currentUser ? (
+          <div className="auth-loading-screen" role="status">Restoring your dashboard...</div>
+        ) : currentUser ? (
           /* Render Authenticated Developer Workspace when Logged In */
           <DashboardWorkspace
             user={currentUser}
-            onLogout={() => setCurrentUser(null)}
+            onLogout={handleLogout}
             onOpenProfile={() => setProfileOpen(true)}
           />
         ) : (

@@ -5,49 +5,49 @@ export const MethodologyFlow: React.FC = () => {
 
   const steps = [
     {
-      phase: 'Phase 1',
-      title: 'Data Collection & Preprocessing',
-      icon: '📡',
+      phase: '01',
+      title: 'Collect the run',
+      icon: '01',
       detail:
-        'Capture build/test logs, stack traces, exit codes, and pipeline metadata via webhooks from GitHub Actions/Jenkins. Strip noise & chunk log context.',
+        'Fetch the workflow run, failed job, log output, pull request, and changed files from GitHub Actions.',
     },
     {
-      phase: 'Phase 2',
-      title: 'Failure Classification',
-      icon: '⚡',
+      phase: '02',
+      title: 'Classify the failure',
+      icon: '02',
       detail:
-        'Compare log/error signatures against historical run patterns to label failures as Flaky (transient) vs. Real (code fault) before running expensive RCA.',
+        'Use deterministic log signals to separate configuration, infrastructure, dependency, and code failures.',
     },
     {
-      phase: 'Phase 3',
-      title: 'Root Cause Analysis (RCA)',
-      icon: '🧠',
+      phase: '03',
+      title: 'Build the evidence',
+      icon: '03',
       detail:
-        'For real failures, the LLM reasons over structured log context, dependency graphs, and historical incident records to pinpoint faulty stages.',
+        'Compare the failure with changed files, functions, commit timing, and the available code structure.',
     },
     {
-      phase: 'Phase 4',
-      title: 'Fix Generation & Sandbox Verification',
-      icon: '🛡️',
+      phase: '04',
+      title: 'Review a report',
+      icon: '04',
       detail:
-        'Generate candidate patch suggestions, apply them inside an isolated Docker execution sandbox, and rerun the failed stage to verify correctness.',
+        'Read the confidence score, evidence chain, classification, and optional AI summary before taking action.',
     },
     {
-      phase: 'Phase 5',
-      title: 'Evaluation & PR Automation',
-      icon: '🚀',
+      phase: '05',
+      title: 'Choose the next step',
+      icon: '05',
       detail:
-        'Benchmark against 30-50 real-world open-source pipeline failures. Propose verified fix PRs with minimal human intervention.',
+        'Use the report as a starting point for a code review or a proposed fix. The final decision stays with the engineer.',
     },
   ];
 
   return (
-    <section className="section-container" id="architecture">
+    <section className="section-container" id="workflow">
       <div className="section-header">
-        <span className="section-subtitle">System Architecture</span>
-        <h2 className="section-title">5-Phase Pipeline Methodology</h2>
+        <span className="section-subtitle">How it works</span>
+        <h2 className="section-title">A review path built around evidence</h2>
         <p className="section-description">
-          An automated end-to-end flow taking raw CI/CD failure logs to a verified, sandboxed fix.
+          Each step leaves room for an engineer to inspect the source of the conclusion.
         </p>
       </div>
 

@@ -82,7 +82,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       });
 
       onUpdateUser(updated);
-      setSuccessMsg('Profile and credentials updated successfully! ⚡');
+      setSuccessMsg('Profile and credentials updated successfully.');
       setCurrentPassword('');
       setNewPassword('');
     } catch (err: any) {

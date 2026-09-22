@@ -7,29 +7,29 @@ export const TeamFooter: React.FC = () => {
         <div className="footer-col">
           <div className="footer-brand">Root Cause CI</div>
           <p className="footer-desc">
-            Evidence-first CI/CD failure diagnosis and verified remediation platform.
+            A small workspace for turning a failed CI run into a reviewable explanation.
           </p>
         </div>
 
         <div className="footer-col">
-          <h4>Platform Capabilities</h4>
+          <h4>In this build</h4>
           <ul className="footer-nav">
-            <li>Log Normalization & Triage</li>
-            <li>Graph-Aware Fault Localization</li>
-            <li>Sandbox Rerun Verification</li>
-            <li>Automated Fix PR Generation</li>
+            <li>GitHub Actions run analysis</li>
+            <li>Failure classification</li>
+            <li>Commit and file evidence</li>
+            <li>Analysis history</li>
           </ul>
         </div>
 
         <div className="footer-col">
-          <h4>Integration & Standards</h4>
-          <p className="dept-info">GitHub Actions & Webhook Infrastructure</p>
-          <p className="phase-info">RESTful API & Microservice Compatibility</p>
+          <h4>Connections</h4>
+          <p className="dept-info">GitHub Actions and GitHub repositories</p>
+          <p className="phase-info">FastAPI and PostgreSQL-backed reports</p>
         </div>
       </div>
 
       <div className="footer-bottom">
-        <p>© 2026 Root Cause CI Pipeline Automation • All Rights Reserved</p>
+        <p>© {new Date().getFullYear()} Root Cause CI</p>
       </div>
     </footer>
   );

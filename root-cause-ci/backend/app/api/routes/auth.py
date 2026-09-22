@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db_session
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.security import create_simple_token, decode_token, hash_password, verify_password
+from app.core.config import get_settings
 from app.models.user import User
 import httpx
 from app.schemas.auth import (
@@ -119,7 +120,11 @@ async def register(data: UserRegister, db: Session = Depends(get_db_session)) ->
     db.refresh(user)
 
     token = create_simple_token(user.id, user.email)
-    return TokenResponse(access_token=token, user=UserResponse.model_validate(user))
+    return TokenResponse(
+        access_token=token,
+        expires_in=get_settings().auth_token_expire_minutes * 60,
+        user=UserResponse.model_validate(user),
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -132,7 +137,11 @@ def login(data: UserLogin, db: Session = Depends(get_db_session)) -> TokenRespon
         )
 
     token = create_simple_token(user.id, user.email)
-    return TokenResponse(access_token=token, user=UserResponse.model_validate(user))
+    return TokenResponse(
+        access_token=token,
+        expires_in=get_settings().auth_token_expire_minutes * 60,
+        user=UserResponse.model_validate(user),
+    )
 
 
 @router.get("/me", response_model=UserProfileResponse)
