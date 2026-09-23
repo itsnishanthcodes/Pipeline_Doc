@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { loginUser, registerUser, saveAuthSession, saveAuthUser, UserAuthData, verifyGitHubCredentials } from '../services/authApi';
 
 interface AuthModalProps {
@@ -30,6 +30,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setError(null);
+    }
+  }, [initialMode, isOpen]);
 
   if (!isOpen) return null;
 
@@ -116,8 +123,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </p>
         </div>
 
-        <div className="auth-tabs">
+        <div className="auth-tabs" role="tablist" aria-label="Authentication mode">
           <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'login'}
             className={`tab-btn ${mode === 'login' ? 'active' : ''}`}
             onClick={() => {
               setMode('login');
@@ -127,6 +137,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             Sign In
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'register'}
             className={`tab-btn ${mode === 'register' ? 'active' : ''}`}
             onClick={() => {
               setMode('register');
