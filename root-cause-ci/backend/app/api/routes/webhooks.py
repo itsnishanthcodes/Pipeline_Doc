@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, status
 
 from app.core.config import Settings, get_settings
 from app.core.security import verify_webhook_signature
 from app.schemas.ingestion import WebhookIngestionResponse
+from app.services.auto_analysis import auto_analyze, should_auto_analyze
 from app.services.ingestion.github_actions import GitHubActionsIngestionService, get_github_actions_ingestion_service
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
@@ -13,6 +14,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 @router.post("/github", response_model=WebhookIngestionResponse)
 async def github_webhook(
     request: Request,
+    background_tasks: BackgroundTasks,
     x_github_event: str | None = Header(default=None, alias="X-GitHub-Event"),
     x_github_delivery: str | None = Header(default=None, alias="X-GitHub-Delivery"),
     x_hub_signature_256: str | None = Header(default=None, alias="X-Hub-Signature-256"),
@@ -33,9 +35,16 @@ async def github_webhook(
         delivery_id=x_github_delivery,
         payload=payload,
     )
+
+    # A completed, failed workflow run is analysed automatically for every linked user.
+    target = should_auto_analyze(x_github_event, payload)
+    if target:
+        background_tasks.add_task(auto_analyze, *target)
+
     return WebhookIngestionResponse(
         status="accepted",
         delivery_id=x_github_delivery,
         event_type=x_github_event,
         ingestion=ingestion_result,
+        auto_analysis_scheduled=bool(target),
     )

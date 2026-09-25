@@ -27,6 +27,11 @@ class ASTParser:
         
         return self._extract_nodes(tree.root_node, code_bytes)
 
+    def has_syntax_errors(self, code: str) -> bool:
+        """True when tree-sitter cannot parse the code cleanly (used to reject broken patches)."""
+        tree = self.parser.parse(code.encode("utf-8"))
+        return bool(tree.root_node.has_error)
+
     def _extract_nodes(self, root_node: tree_sitter.Node, code: bytes) -> Dict[str, Any]:
         result = {
             "functions": [],
@@ -65,8 +70,13 @@ class ASTParser:
 
     def _process_node(self, node: tree_sitter.Node, tag: str, result: Dict[str, Any]):
         name = node.text.decode('utf-8')
-        start_point = node.start_point
-        end_point = node.end_point
+        # For definitions, report the span of the whole function/class body rather than just its name,
+        # so callers can tell which definition a changed line belongs to.
+        span_node = node
+        if tag in ("function.def", "class.def") and node.parent is not None:
+            span_node = node.parent
+        start_point = span_node.start_point
+        end_point = span_node.end_point
         
         node_info = {
             "name": name,

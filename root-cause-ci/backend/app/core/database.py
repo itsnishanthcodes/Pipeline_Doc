@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import threading
 from collections.abc import Generator
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -32,12 +33,40 @@ def get_session_factory() -> sessionmaker[Session]:
 
 
 _initialized = False
+_init_lock = threading.Lock()
+
+
+def _add_missing_columns(engine: Engine) -> None:
+    """Minimal forward-only migration: add columns that exist on the models but not in the database.
+
+    create_all() never alters existing tables, so databases created before a model gained new
+    nullable columns would otherwise fail on every query touching them.
+    """
+    inspector = inspect(engine)
+    with engine.begin() as connection:
+        for table in Base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            existing = {col["name"] for col in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing or not column.nullable:
+                    continue
+                col_type = column.type.compile(dialect=engine.dialect)
+                connection.execute(text(f'ALTER TABLE {table.name} ADD COLUMN {column.name} {col_type}'))
 
 
 def init_db() -> None:
     global _initialized, _engine, _session_factory
-    if _initialized:
-        return
+    with _init_lock:
+        if _initialized:
+            return
+        _init_db_locked()
+
+
+def _init_db_locked() -> None:
+    global _initialized, _engine, _session_factory
+    import app.models  # noqa: F401  (register all models on Base.metadata)
+
     try:
         engine = get_engine()
         Base.metadata.create_all(bind=engine)
@@ -45,7 +74,9 @@ def init_db() -> None:
         # PostgreSQL is unreachable or timed out -> Fallback to SQLite instantly
         _engine = create_engine("sqlite:///./app.db", connect_args={"check_same_thread": False})
         _session_factory = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
-        Base.metadata.create_all(bind=_engine)
+        engine = _engine
+        Base.metadata.create_all(bind=engine)
+    _add_missing_columns(engine)
     _initialized = True
 
 

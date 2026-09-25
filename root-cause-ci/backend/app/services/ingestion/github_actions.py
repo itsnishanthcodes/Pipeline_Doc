@@ -179,7 +179,7 @@ class GitHubActionsIngestionService:
 
     def _analyze_failure(self, failure: Failure | None, payload: dict[str, Any]) -> tuple[FailureClassification | None, FlakyAnalysis | None, GitAnalysisResult | None]:
         if failure is None:
-            return None, None
+            return None, None, None
 
         classification = self._classifier.classify(failure, failure.error_message)
 

@@ -1,19 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db_session
-from app.services.pipeline_analyzer import PipelineAnalyzer
-
-# We need the user from the token to get their github_token
-# Using the same auth verification logic (we can just create a simple dependency)
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.security import decode_token
-from app.models.user import User
-from sqlalchemy import select
+from app.models.analysis_report import AnalysisReport
+from app.services.pipeline_analyzer import PipelineAnalyzer
+from app.services.report_serializer import serialize_report
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 security = HTTPBearer()
+
 
 def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> int:
     try:
@@ -35,48 +34,27 @@ class AnalysisRequest(BaseModel):
 async def analyze_github_pipeline(
     request: AnalysisRequest,
     db: Session = Depends(get_db_session),
-    user_id: int = Depends(get_current_user_id)
+    user_id: int = Depends(get_current_user_id),
 ):
     try:
-        analyzer = PipelineAnalyzer(db)
-        result = await analyzer.analyze_pipeline(request.repository, request.run_id, user_id)
-        return result
+        return await PipelineAnalyzer(db).analyze_pipeline(request.repository, request.run_id, user_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {e}")
 
 
 @router.get("/history")
-def get_analysis_history(
-    db: Session = Depends(get_db_session),
-    user_id: int = Depends(get_current_user_id)
-):
-    from app.models.analysis_report import AnalysisReport
+def get_analysis_history(db: Session = Depends(get_db_session), user_id: int = Depends(get_current_user_id)):
     reports = db.scalars(
-        select(AnalysisReport)
-        .where(AnalysisReport.user_id == user_id)
-        .order_by(AnalysisReport.created_at.desc())
+        select(AnalysisReport).where(AnalysisReport.user_id == user_id).order_by(AnalysisReport.created_at.desc())
     ).all()
+    return {"reports": [serialize_report(r) for r in reports]}
 
-    history = []
-    for r in reports:
-        history.append({
-            "run_id": r.run_id,
-            "job_name": r.job_name,
-            "is_healthy": r.is_healthy,
-            "pr_title": r.pr_title,
-            "pr_number": r.pr_number,
-            "author": r.author,
-            "classification": {
-                "category": r.category,
-                "explanation": r.explanation
-            },
-            "comment_posted": r.comment_posted,
-            "llm_summary": r.llm_summary,
-            "report_preview": r.report_body,
-            "created_at": r.created_at.isoformat() if r.created_at else None,
-            "repository": r.repository,
-        })
 
-    return {"reports": history}
+@router.get("/reports/{report_id}")
+def get_report(report_id: int, db: Session = Depends(get_db_session), user_id: int = Depends(get_current_user_id)):
+    report = db.get(AnalysisReport, report_id)
+    if not report or report.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return serialize_report(report)

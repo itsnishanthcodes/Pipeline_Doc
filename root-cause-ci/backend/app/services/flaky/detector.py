@@ -44,7 +44,10 @@ class FlakyTestDetector:
         failure_count = sum(1 for outcome in outcomes if outcome == "FAIL")
         pass_count = sum(1 for outcome in outcomes if outcome == "PASS")
         transitions = sum(1 for left, right in zip(outcomes, outcomes[1:]) if left != right)
-        intermittent = 1.0 if failure_count > 0 and pass_count > 0 else 0.0
+        # Interleaving means the test failed and later passed again (a recovery), not merely that a
+        # long green history ends in its first failure, which is what a genuine regression looks like.
+        recovered = any(a == "FAIL" and "PASS" in outcomes[i + 1:] for i, a in enumerate(outcomes))
+        intermittent = 1.0 if recovered else 0.0
         failure_rate = failure_count / len(outcomes)
         transition_rate = transitions / max(len(outcomes) - 1, 1)
         repeat_failure_signal = 1.0 if self._has_consecutive_failures(outcomes) else 0.0

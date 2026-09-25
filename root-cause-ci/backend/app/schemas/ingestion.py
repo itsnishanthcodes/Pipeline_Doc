@@ -61,3 +61,4 @@ class WebhookIngestionResponse(BaseModel):
     delivery_id: str | None = None
     event_type: str | None = None
     ingestion: IngestionResult
+    auto_analysis_scheduled: bool = False
