@@ -9,3 +9,6 @@ backend/.venv/
 frontend/node_modules/
 frontend/dist/
 .DS_Store
+
+# Per-installation development secret (signs tokens, encrypts GitHub tokens)
+backend/.local_secret

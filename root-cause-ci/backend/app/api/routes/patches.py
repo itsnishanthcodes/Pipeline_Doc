@@ -5,12 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.api.routes.auth import get_current_user
-from app.core.config import get_settings
+from app.api.dependencies import get_current_user
 from app.core.database import get_db_session
 from app.integrations.github_client import GitHubClient
 from app.models.analysis_report import AnalysisReport
 from app.models.user import User
+from app.services.github_tokens import github_token_for
 from app.services.report_serializer import serialize_report
 from app.services.verification import verification_from_runs
 
@@ -29,7 +29,7 @@ def _load_report(db: Session, report_id: int, user: User) -> AnalysisReport:
 
 
 def _client(user: User) -> GitHubClient:
-    token = user.github_token or get_settings().github_token
+    token = github_token_for(user)
     if not token:
         raise HTTPException(status_code=401, detail="GitHub token missing. Add one in your profile.")
     return GitHubClient(token)

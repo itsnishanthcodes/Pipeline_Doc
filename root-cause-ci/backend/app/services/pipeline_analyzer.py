@@ -12,7 +12,6 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
 from app.integrations.github_client import GitHubClient
 from app.models.analysis_report import AnalysisReport
 from app.models.user import User
@@ -32,6 +31,7 @@ from app.services.attribution.signals import (
 from app.services.classification.failure_classifier import get_failure_classifier
 from app.services.evidence.generator import EvidenceGenerator
 from app.services.flaky.detector import FlakyTestDetector, TestHistoryStore
+from app.services.github_tokens import github_token_for
 from app.services.patch.patch_service import choose_target_file, generate_patch
 from app.services.report_serializer import serialize_report
 
@@ -53,8 +53,7 @@ class PipelineAnalyzer:
     ) -> dict[str, Any]:
         repo = repo.strip()
         user = self.db.scalar(select(User).where(User.id == user_id))
-        token = (user.github_token if user and user.github_token else None) or get_settings().github_token
-        github = GitHubClient(token)
+        github = GitHubClient(github_token_for(user))
         warnings: list[str] = []
 
         try:

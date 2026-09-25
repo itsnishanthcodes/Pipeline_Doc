@@ -53,10 +53,32 @@ class LogAnalysis:
         }
 
 
+SECRET_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S), "[REDACTED PRIVATE KEY]"),
+    (re.compile(r"\b(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{20,}\b"), "[REDACTED]"),
+    (re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b"), "[REDACTED]"),
+    (re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"), "[REDACTED]"),
+    (re.compile(r"\bxox[abprs]-[A-Za-z0-9-]{10,}\b"), "[REDACTED]"),
+    (re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"), "[REDACTED]"),
+    (re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]{16,}"), r"\1[REDACTED]"),
+    (re.compile(r"(?i)\b((?:password|passwd|secret|token|api[_-]?key|access[_-]?key)\s*[=:]\s*)(['\"]?)[^\s'\"]{6,}\2"),
+     r"\1[REDACTED]"),
+    (re.compile(r"(?i)(://[^/\s:@]+:)[^@\s/]+@"), r"\1[REDACTED]@"),
+)
+
+
+def redact_secrets(text: str) -> str:
+    """Mask credentials that may appear in CI logs before they are stored or sent to the LLM."""
+    for pattern, replacement in SECRET_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
 def clean_log(raw: str) -> str:
     text = ANSI_ESCAPE.sub("", raw or "")
     text = TIMESTAMP_PREFIX.sub("", text)
-    return GROUP_MARKER.sub("", text)
+    text = GROUP_MARKER.sub("", text)
+    return redact_secrets(text)
 
 
 def normalize_path(path: str) -> str:

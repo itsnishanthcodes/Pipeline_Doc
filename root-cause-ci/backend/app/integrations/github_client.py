@@ -67,6 +67,10 @@ class GitHubClient:
         data = await self._get(f"/repos/{repo}/actions/runs", params={"branch": branch, "per_page": per_page})
         return data.get("workflow_runs", [])
 
+    async def list_recent_runs(self, repo: str, per_page: int = 25) -> list[dict]:
+        data = await self._get(f"/repos/{repo}/actions/runs", params={"per_page": per_page})
+        return data.get("workflow_runs", [])
+
     async def get_latest_workflow_run(self, repo_full_name: str) -> dict | None:
         try:
             data = await self._get(f"/repos/{repo_full_name}/actions/runs", params={"per_page": 1})
@@ -153,10 +157,8 @@ class GitHubClient:
         return await self._post(f"/repos/{repo}/issues/{pull_number}/comments", {"body": comment})
 
     async def get_user_repositories(self) -> list[dict]:
-        try:
-            return await self._get("/user/repos", params={"sort": "updated", "per_page": 100})
-        except Exception:
-            return []
+        """Repositories the token can access, most recently updated first. Raises on GitHub errors."""
+        return await self._get("/user/repos", params={"sort": "updated", "per_page": 100})
 
     async def create_branch(self, repo: str, branch_name: str, sha: str) -> dict:
         return await self._post(f"/repos/{repo}/git/refs", {"ref": f"refs/heads/{branch_name}", "sha": sha})

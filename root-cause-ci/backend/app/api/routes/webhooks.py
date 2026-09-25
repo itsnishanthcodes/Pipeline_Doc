@@ -22,6 +22,10 @@ async def github_webhook(
     ingestion_service: GitHubActionsIngestionService = Depends(get_github_actions_ingestion_service),
 ) -> WebhookIngestionResponse:
     payload_bytes = await request.body()
+    if settings.is_production and not settings.github_webhook_secret:
+        # never accept unsigned events in production
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Webhook secret is not configured on the server.")
     if settings.github_webhook_secret:
         if not verify_webhook_signature(payload_bytes, x_hub_signature_256, settings.github_webhook_secret):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid GitHub webhook signature")
