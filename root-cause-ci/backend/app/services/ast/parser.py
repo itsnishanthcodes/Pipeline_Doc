@@ -32,51 +32,58 @@ class ASTParser:
             "functions": [],
             "classes": [],
             "calls": [],
+            "imports": [],
+            "parse_errors": [],
         }
-
-        # Query to extract function/class definitions and function calls
-        query_code = """
-        (function_definition
-            name: (identifier) @function.def)
-            
-        (class_definition
-            name: (identifier) @class.def)
-            
-        (call
-            function: [
-                (identifier) @function.call
-                (attribute attribute: (identifier) @function.call)
-            ])
-        """
-        query = tree_sitter.Query(self.language, query_code)
-        cursor = tree_sitter.QueryCursor(query)
-        captures = cursor.captures(root_node)
-
-        # captures is a dict mapping string names to lists of Nodes
-        if isinstance(captures, dict):
-            for tag, nodes in captures.items():
-                for node in nodes:
-                    self._process_node(node, tag, result)
-        else:
-            for node, tag in captures:
-                self._process_node(node, tag, result)
-
+        self._walk(root_node, code, result, current_function=None, current_class=None)
         return result
 
-    def _process_node(self, node: tree_sitter.Node, tag: str, result: Dict[str, Any]):
-        name = node.text.decode('utf-8')
-        start_point = node.start_point
-        end_point = node.end_point
-        
-        node_info = {
-            "name": name,
-            "start_line": start_point.row + 1,
-            "end_line": end_point.row + 1
+    def _walk(
+        self,
+        node: tree_sitter.Node,
+        code: bytes,
+        result: Dict[str, Any],
+        current_function: str | None,
+        current_class: str | None,
+    ) -> None:
+        if node.has_error and node.type == "ERROR":
+            result["parse_errors"].append(self._range(node))
+
+        if node.type == "function_definition":
+            name_node = node.child_by_field_name("name")
+            name = self._node_text(name_node, code) if name_node else "<anonymous>"
+            qualified_name = f"{current_class}.{name}" if current_class else name
+            result["functions"].append({"name": name, "qualified_name": qualified_name, **self._range(node)})
+            for child in node.children:
+                self._walk(child, code, result, qualified_name, current_class)
+            return
+
+        if node.type == "class_definition":
+            name_node = node.child_by_field_name("name")
+            name = self._node_text(name_node, code) if name_node else "<anonymous>"
+            result["classes"].append({"name": name, **self._range(node)})
+            for child in node.children:
+                self._walk(child, code, result, current_function, name)
+            return
+
+        if node.type == "call":
+            function_node = node.child_by_field_name("function")
+            name = self._node_text(function_node, code) if function_node else "<unknown>"
+            result["calls"].append({"name": name.split(".")[-1], "callee": name, "caller": current_function, **self._range(node)})
+
+        if node.type in {"import_statement", "import_from_statement"}:
+            result["imports"].append({"name": self._node_text(node, code), **self._range(node)})
+
+        for child in node.children:
+            self._walk(child, code, result, current_function, current_class)
+
+    def _node_text(self, node: tree_sitter.Node | None, code: bytes) -> str:
+        return node.text.decode("utf-8") if node is not None and node.text else ""
+
+    def _range(self, node: tree_sitter.Node) -> Dict[str, int]:
+        return {
+            "start_line": node.start_point.row + 1,
+            "start_column": node.start_point.column,
+            "end_line": node.end_point.row + 1,
+            "end_column": node.end_point.column,
         }
-        
-        if tag == "function.def":
-            result["functions"].append(node_info)
-        elif tag == "class.def":
-            result["classes"].append(node_info)
-        elif tag == "function.call":
-            result["calls"].append(node_info)

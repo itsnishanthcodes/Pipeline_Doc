@@ -21,18 +21,24 @@ class AttributionScorer:
             total_score = 0.0
             contributions = {}
             
+            computed_weight = 0.0
             for signal, weight in self.weights.items():
                 # Get the raw signal value, default to 0 if not present
-                raw_val = candidate.get("signals", {}).get(signal, 0.0)
+                raw_signal = candidate.get("signals", {}).get(signal)
+                is_computed = raw_signal is not None
+                raw_val = float(raw_signal or 0.0) if is_computed else 0.0
                 contribution = raw_val * weight
                 total_score += contribution
+                if is_computed:
+                    computed_weight += weight
                 contributions[signal] = {
                     "raw_value": raw_val,
                     "weight": weight,
                     "contribution": contribution
+                    ,"status": "COMPUTED" if is_computed else "UNAVAILABLE"
                 }
             
-            candidate["confidence_score"] = round(total_score, 4)
+            candidate["confidence_score"] = round(total_score / computed_weight, 4) if computed_weight else 0.0
             candidate["contributions"] = contributions
             
         # Sort by confidence descending

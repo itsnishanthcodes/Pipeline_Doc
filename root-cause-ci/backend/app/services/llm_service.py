@@ -23,6 +23,17 @@ def fallback_summary(category: str, explanation: str, repo: str, run_id: int) ->
 
 # Dummy comment to trigger hot-reload and clear lru_cache
 import json
+import re
+
+
+_SECRET_LINE = re.compile(
+    r"(?im)^.*(?:token|api[_-]?key|secret|password|authorization|private[_-]?key)\s*[:=].*$"
+)
+
+
+def redact_sensitive_log_lines(log_text: str) -> str:
+    """Remove common credential-bearing log lines before sending context to an LLM."""
+    return _SECRET_LINE.sub("[REDACTED SENSITIVE LOG LINE]", log_text)
 
 async def generate_constrained_patch(
     failure_log: str,
@@ -32,7 +43,7 @@ async def generate_constrained_patch(
     changed_files: list[str],
 ) -> dict:
     """
-    Generates a structured JSON patch based on deterministic evidence.
+    Generates a structured JSON unified diff based on deterministic evidence.
     """
     settings = get_settings()
 
@@ -43,7 +54,7 @@ async def generate_constrained_patch(
             "modified_files": []
         }
 
-    relevant_log = extract_relevant_log(failure_log)
+    relevant_log = redact_sensitive_log_lines(extract_relevant_log(failure_log))
     changed_files_str = ", ".join(changed_files) if changed_files else "none"
     
     evidence_str = ""
@@ -68,7 +79,7 @@ Constraints:
 2. Return a strict JSON object with this exact schema:
 {{
   "summary": "Concise root cause summary based on evidence",
-  "patch": "The COMPLETE full file content with the bug fixed (do NOT use diff format, return the whole fixed file), or null if no patch can be safely generated",
+    "patch": "A unified diff beginning with --- a/ and +++ b/, or null if no patch can be safely generated",
   "modified_files": ["list", "of", "files", "modified"]
 }}
 """

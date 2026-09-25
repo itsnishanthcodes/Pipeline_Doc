@@ -2,7 +2,7 @@ import asyncio
 from app.integrations.github_client import GitHubClient
 from app.core.config import get_settings
 
-async def test():
+async def manual_github_smoke_test():
     token = get_settings().github_token
     github = GitHubClient(token)
     try:
@@ -15,4 +15,5 @@ async def test():
         else:
             print("ERROR:", e)
 
-asyncio.run(test())
+if __name__ == "__main__":
+    asyncio.run(manual_github_smoke_test())

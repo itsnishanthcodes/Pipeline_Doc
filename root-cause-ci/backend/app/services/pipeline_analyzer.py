@@ -1,3 +1,7 @@
+import json
+import time
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -5,8 +9,11 @@ from sqlalchemy import select
 from app.integrations.github_client import GitHubClient
 from app.services.classification.failure_classifier import get_failure_classifier
 from app.schemas.ingestion import Failure
+from app.services.ingestion.log_parser import localize_failure
+from app.services.ast.project import PythonProjectAnalyzer
 from app.models.user import User
 from app.models.analysis_report import AnalysisReport
+from app.models.rca import CandidateCommitRecord, DependencyPathRecord, EvidenceItemRecord, FailureLocalizationRecord
 
 
 class PipelineAnalyzer:
@@ -15,6 +22,7 @@ class PipelineAnalyzer:
         self.classifier = get_failure_classifier()
 
     async def analyze_pipeline(self, repo: str, run_id: int, user_id: int) -> Dict[str, Any]:
+        analysis_started = time.perf_counter()
         repo = repo.strip()
         from app.core.config import get_settings
         user = self.db.scalar(select(User).where(User.id == user_id))
@@ -93,7 +101,11 @@ class PipelineAnalyzer:
             error_message=log_text[-2000:],  # Pass last 2000 chars as excerpt
             commit_sha=run_data.get("head_sha")
         )
-        
+        localization = localize_failure(log_text)
+        failure.test_name = localization.failed_test
+        failure.file_path = localization.frames[0].file_path if localization.frames else None
+        failure.line_number = localization.frames[0].line_number if localization.frames else None
+        failure.stack_trace = "\n".join(frame.raw for frame in localization.frames) or None
         classification = self.classifier.classify(failure, log_text)
 
         # 5. Fetch PR and changed files
@@ -124,6 +136,9 @@ class PipelineAnalyzer:
         graph = GraphBuilder()
         
         found_functions = []
+        ast_analysis = []
+        dependency_paths = []
+        project_analysis = None
         function_overlap_score = 0.0
         file_overlap_score = 0.0
 
@@ -143,6 +158,8 @@ class PipelineAnalyzer:
                         content = await github.get_file_content(repo, file_path, commit_sha)
                         if content:
                             ast_data = ast_parser.parse_code(content)
+                            ast_analysis.append({"file": file_path, **ast_data})
+                            graph.add_ast_result(file_path, ast_data)
                             for func in ast_data.get("functions", []):
                                 func_name = func["name"]
                                 found_functions.append(func_name)
@@ -152,8 +169,41 @@ class PipelineAnalyzer:
                                 # Simple function overlap heuristic
                                 if func_name in log_text:
                                     function_overlap_score += 1.0
+                            if failure.test_name:
+                                dependency_paths.extend(graph.find_paths_from_test_to_commits(failure.test_name, max_depth=4))
                     except Exception as e:
                         pass
+
+            # Build only the bounded source neighborhood needed for this failure.
+            source_paths = set(changed_files)
+            source_paths.update(frame.file_path for frame in localization.frames if frame.file_path)
+            test_file = None
+            if localization.failed_test and "::" in localization.failed_test:
+                test_file = localization.failed_test.split("::", 1)[0]
+                source_paths.add(test_file)
+            with TemporaryDirectory(prefix="root-cause-analysis-") as source_dir:
+                written_paths = []
+                for source_path in source_paths:
+                    if not source_path.endswith(".py"):
+                        continue
+                    try:
+                        content = await github.get_file_content(repo, source_path, commit_sha)
+                        if content is None:
+                            continue
+                        destination = Path(source_dir) / source_path
+                        destination.parent.mkdir(parents=True, exist_ok=True)
+                        destination.write_text(content, encoding="utf-8")
+                        written_paths.append(source_path)
+                    except Exception:
+                        continue
+                if written_paths:
+                    project_analysis = PythonProjectAnalyzer(source_dir).analyze(
+                        written_paths,
+                        test_file=test_file,
+                        test_name=localization.failed_test.split("::", 1)[1] if localization.failed_test and "::" in localization.failed_test else None,
+                        max_depth=4,
+                    )
+                    dependency_paths = project_analysis.paths
         
         # Normalize scores
         if changed_files:
@@ -166,11 +216,12 @@ class PipelineAnalyzer:
             "changed_files": changed_files,
             "changed_functions": found_functions,
             "signals": {
-                "temporal_proximity": 0.9,  # Would be derived from commit timestamp vs run timestamp
+                "temporal_proximity": None,
                 "file_overlap": file_overlap_score,
-                "stack_trace_overlap": function_overlap_score, # For MVP, tie these together
+                "stack_trace_overlap": None,
                 "function_overlap": function_overlap_score,
-                "dependency_relationship": 0.5 if function_overlap_score > 0 else 0.0
+                "dependency_relationship": 1.0 if dependency_paths else None,
+                "historical_evidence": None,
             }
         }
         
@@ -181,16 +232,36 @@ class PipelineAnalyzer:
         evidence_gen = EvidenceGenerator()
         evidence_chain = evidence_gen.generate_chain(best_candidate)
         confidence = best_candidate.get("confidence_score", 0.0)
+        unavailable_components = [
+            name for name, contribution in best_candidate.get("contributions", {}).items()
+            if contribution.get("status") == "UNAVAILABLE"
+        ]
+        rca_status = "SUPPORTED" if evidence_chain and not unavailable_components else ("PARTIAL" if evidence_chain else "INSUFFICIENT_EVIDENCE")
 
-        # 7. Generate Constrained Patch (Phase 4)
+        # 7. Generate a patch only when deterministic evidence supports it.
+        from app.core.config import get_settings
         from app.services.llm_service import generate_constrained_patch
-        patch_result = await generate_constrained_patch(
-            failure_log=log_text,
-            evidence_chain=evidence_chain,
-            repo=repo,
-            run_id=run_id,
-            changed_files=changed_files,
+
+        code_categories = {"CODE_REGRESSION", "TEST_FAILURE", "BUILD_FAILURE", "LINT_FAILURE", "TYPE_CHECK_FAILURE"}
+        patch_allowed = (
+            classification.category in code_categories
+            and confidence >= get_settings().patch_confidence_threshold
+            and bool(evidence_chain)
+            and not (getattr(classification, "category", "") == "FLAKY_TEST")
         )
+        patch_result = {
+            "summary": "Patch generation skipped because deterministic evidence was insufficient.",
+            "patch": None,
+            "modified_files": [],
+        }
+        if patch_allowed:
+            patch_result = await generate_constrained_patch(
+                failure_log=log_text,
+                evidence_chain=evidence_chain,
+                repo=repo,
+                run_id=run_id,
+                changed_files=changed_files,
+            )
         
         llm_summary = patch_result.get("summary", "No summary generated.")
         patch_code = patch_result.get("patch")
@@ -245,6 +316,41 @@ class PipelineAnalyzer:
         )
         self.db.add(report_record)
         self.db.commit()
+        self.db.refresh(report_record)
+
+        self.db.add(FailureLocalizationRecord(
+            analysis_report_id=report_record.id,
+            status=localization.status,
+            reason=localization.reason,
+            exception_type=localization.exception_type,
+            exception_message=localization.exception_message,
+            failed_test=localization.failed_test,
+            frames_json=json.dumps(localization.model_dump().get("frames", [])),
+        ))
+        for candidate in scored_candidates:
+            self.db.add(CandidateCommitRecord(
+                analysis_report_id=report_record.id,
+                commit_sha=candidate.get("commit_sha", ""),
+                subject=candidate.get("subject", ""),
+                score=float(candidate.get("confidence_score", 0.0)),
+                components_json=json.dumps(candidate.get("contributions", {})),
+                changed_files_json=json.dumps(candidate.get("changed_files", [])),
+                changed_lines_json=json.dumps(candidate.get("changed_lines", [])),
+            ))
+        for item in evidence_chain:
+            self.db.add(EvidenceItemRecord(
+                analysis_report_id=report_record.id,
+                evidence_type=item.get("type", "UNKNOWN"),
+                source=str(item.get("source", "")),
+                description=item.get("description", item.get("explanation", "")),
+                value_json=json.dumps(item.get("value")),
+                relevance=item.get("relevance"),
+                location=item.get("location"),
+                supports=item.get("supports"),
+            ))
+        for path in dependency_paths:
+            self.db.add(DependencyPathRecord(analysis_report_id=report_record.id, path_json=json.dumps(path)))
+        self.db.commit()
 
         return {
             "run_id": run_id,
@@ -263,5 +369,30 @@ class PipelineAnalyzer:
             "report_preview": report_body,
             "evidence_chain": evidence_chain,
             "confidence_score": confidence,
-            "patch_code": patch_code
+            "candidate_commits": scored_candidates,
+            "attribution_components": best_candidate.get("contributions", {}),
+            "patch_code": patch_code,
+            "localization": localization.model_dump(),
+            "ast_analysis": ast_analysis,
+            "dependency_paths": dependency_paths,
+            "project_graph": {
+                "status": project_analysis.status,
+                "unresolved": project_analysis.unresolved,
+                "files_analyzed": project_analysis.files_analyzed,
+                "functions_analyzed": project_analysis.functions_analyzed,
+            } if project_analysis else {"status": "UNAVAILABLE", "files_analyzed": [], "functions_analyzed": 0, "unresolved": []},
+            "authoritative_rca": {
+                "status": rca_status,
+                "root_cause_commit": best_candidate.get("commit_sha"),
+                "confidence": confidence,
+                "dependency_path": max(dependency_paths, key=len) if dependency_paths else [],
+                "evidence": evidence_chain,
+                "candidate_commits": scored_candidates,
+                "files_analyzed": project_analysis.files_analyzed if project_analysis else [],
+                "functions_analyzed": project_analysis.functions_analyzed if project_analysis else 0,
+                "graph_nodes": project_analysis.graph.number_of_nodes() if project_analysis else 0,
+                "localization": localization.model_dump(),
+                "unresolved_dependencies": project_analysis.unresolved + [{"import": item} for item in project_analysis.unresolved_imports] if project_analysis else [],
+                "analysis_time": round(time.perf_counter() - analysis_started, 6),
+            },
         }

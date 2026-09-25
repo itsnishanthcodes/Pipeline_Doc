@@ -102,3 +102,14 @@ export async function fetchRepositories() {
 
   return response.json();
 }
+
+export async function fetchRcaEvaluation() {
+  const token = localStorage.getItem('access_token');
+  const response = await fetch(`${baseUrl}/analysis/evaluation/latest`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new Error('RCA evaluation is not available');
+  }
+  return response.json();
+}

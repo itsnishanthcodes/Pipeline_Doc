@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.schemas.classification import FailureClassification, FlakyAnalysis
 from app.schemas.git import GitAnalysisResult
+from app.schemas.localization import FailureLocalization
 
 
 class PipelineRun(BaseModel):
@@ -54,6 +55,7 @@ class IngestionResult(BaseModel):
     flaky_analysis: FlakyAnalysis | None = None
     git_analysis: GitAnalysisResult | None = None
     error_signatures: list[ErrorSignature] = Field(default_factory=list)
+    localization: FailureLocalization | None = None
 
 
 class WebhookIngestionResponse(BaseModel):

@@ -31,4 +31,12 @@ def save_db():
     call_names = [c["name"] for c in result["calls"]]
     assert "validate" in call_names
     assert "save_db" in call_names
+    assert any(call["caller"] == "MyService.process_data" for call in result["calls"] if call["name"] == "validate")
+
+
+def test_ast_parser_extracts_imports_and_ranges():
+    result = ASTParser().parse_code("import os\n\ndef run():\n    os.getcwd()\n")
+    assert result["imports"][0]["name"] == "import os"
+    assert result["functions"][0]["start_line"] == 3
+    assert result["calls"][0]["callee"] == "os.getcwd"
 

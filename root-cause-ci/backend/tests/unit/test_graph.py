@@ -33,3 +33,17 @@ def test_graph_builder_tracks_dependencies_and_paths():
     assert "ABC1234" in paths[0]
     assert "tests/test_auth.py::test_invalid_token" in paths[0]
 
+
+def test_graph_builder_connects_ast_calls():
+    builder = GraphBuilder()
+    builder.add_ast_result(
+        "src/service.py",
+        {
+            "functions": [{"name": "checkout"}, {"name": "calculate_total"}],
+            "calls": [{"name": "calculate_total", "caller": "checkout"}],
+            "imports": [],
+        },
+    )
+    assert builder.graph.has_edge("src/service.py::checkout", "src/service.py::calculate_total")
+    assert builder.graph["src/service.py::checkout"]["src/service.py::calculate_total"][0]["relation"] == "CALLS"
+

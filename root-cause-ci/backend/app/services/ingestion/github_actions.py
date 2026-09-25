@@ -13,6 +13,7 @@ from app.services.ingestion.log_parser import (
     extract_error_signatures,
     extract_failed_test_name,
     extract_stack_trace,
+    localize_failure,
     first_non_empty,
 )
 from app.services.git.analysis import get_git_analysis_service
@@ -115,6 +116,7 @@ class GitHubActionsIngestionService:
             flaky_analysis=flaky_analysis,
             git_analysis=git_analysis,
             error_signatures=extract_error_signatures(log_excerpt),
+            localization=localize_failure(log_excerpt),
         )
 
     def _ingest_workflow_job(self, payload: dict[str, Any]) -> IngestionResult:
@@ -151,6 +153,7 @@ class GitHubActionsIngestionService:
             flaky_analysis=flaky_analysis,
             git_analysis=git_analysis,
             error_signatures=extract_error_signatures(log_excerpt),
+            localization=localize_failure(log_excerpt),
         )
 
     def _build_failure(self, pipeline: PipelineRun, job: Job, log_excerpt: str | None) -> Failure | None:
@@ -179,7 +182,7 @@ class GitHubActionsIngestionService:
 
     def _analyze_failure(self, failure: Failure | None, payload: dict[str, Any]) -> tuple[FailureClassification | None, FlakyAnalysis | None, GitAnalysisResult | None]:
         if failure is None:
-            return None, None
+            return None, None, None
 
         classification = self._classifier.classify(failure, failure.error_message)
 

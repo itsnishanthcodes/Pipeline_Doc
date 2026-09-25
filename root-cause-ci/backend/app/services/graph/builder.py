@@ -8,6 +8,11 @@ class GraphBuilder:
     def add_file(self, file_path: str):
         self.graph.add_node(file_path, type="FILE")
 
+    def add_import(self, file_path: str, import_name: str):
+        module_id = f"module::{import_name}"
+        self.graph.add_node(module_id, type="MODULE", name=import_name)
+        self.graph.add_edge(file_path, module_id, relation="IMPORTS")
+
     def add_function(self, func_name: str, file_path: str):
         func_id = f"{file_path}::{func_name}"
         self.graph.add_node(func_id, type="FUNCTION", name=func_name, file=file_path)
@@ -17,6 +22,27 @@ class GraphBuilder:
         test_id = f"{file_path}::{test_name}"
         self.graph.add_node(test_id, type="TEST", name=test_name, file=file_path)
         self.graph.add_edge(test_id, file_path, relation="DEFINED_IN")
+
+    def add_test_relationship(self, test_name: str, test_file: str, function_id: str):
+        test_id = f"{test_file}::{test_name}"
+        self.graph.add_node(test_id, type="TEST", name=test_name, file=test_file)
+        if self.graph.has_node(function_id):
+            self.graph.add_edge(test_id, function_id, relation="TESTS")
+
+    def add_ast_result(self, file_path: str, ast_result: Dict[str, Any], test_name: str | None = None):
+        self.add_file(file_path)
+        for imported in ast_result.get("imports", []):
+            self.add_import(file_path, imported["name"])
+        for function in ast_result.get("functions", []):
+            self.add_function(function["name"], file_path)
+        for call in ast_result.get("calls", []):
+            caller = call.get("caller")
+            if caller:
+                self.add_call(f"{file_path}::{caller}", call["name"])
+        if test_name:
+            test_functions = [f for f in ast_result.get("functions", []) if f["name"] == test_name]
+            for function in test_functions:
+                self.add_test_relationship(test_name, file_path, f"{file_path}::{function['name']}")
 
     def add_call(self, caller_id: str, callee_name: str):
         """Adds a call edge. Note: callee_name might be ambiguous without full module resolution, 

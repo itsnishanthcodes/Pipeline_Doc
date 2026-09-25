@@ -1296,6 +1296,89 @@ body {
   font-size: 0.88rem;
 }
 
+.verification-required-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.analysis-stage-list {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+  padding: 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+}
+
+.analysis-stage {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: var(--bg-dark);
+}
+
+.analysis-stage-state {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.analysis-stage.passed .analysis-stage-state { color: var(--accent-emerald); background: rgba(52, 211, 153, 0.12); }
+.analysis-stage.failed .analysis-stage-state { color: var(--accent-red); background: rgba(248, 113, 113, 0.12); }
+.analysis-stage.skipped .analysis-stage-state { color: var(--text-muted); background: var(--bg-card); }
+.analysis-stage strong, .analysis-stage span { display: block; }
+.analysis-stage strong { font-size: 0.86rem; }
+.analysis-stage div span { color: var(--text-muted); font-size: 0.78rem; }
+.analysis-stage small { color: var(--text-muted); font-size: 0.68rem; letter-spacing: 0.04em; }
+
+.rca-path-card,
+.candidate-summary-card {
+  margin-top: 12px;
+}
+
+.rca-evaluation-panel { margin-bottom: 20px; overflow: hidden; }
+.page-header.compact { margin-bottom: 14px; }
+.page-header.compact h3 { margin-bottom: 4px; }
+.evaluation-table-wrap { overflow-x: auto; }
+.evaluation-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; white-space: nowrap; }
+.evaluation-table th, .evaluation-table td { padding: 9px 10px; border-bottom: 1px solid var(--border-glass); text-align: left; }
+.evaluation-table th { color: var(--text-muted); font-weight: 600; }
+.evaluation-table td { color: var(--text-main); }
+
+.rca-path-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+  color: var(--accent-cyan);
+  font-size: 0.8rem;
+}
+
+.rca-path-value code {
+  overflow-wrap: anywhere;
+}
+
+.candidate-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
 .status-dot {
   width: 7px;
   height: 7px;

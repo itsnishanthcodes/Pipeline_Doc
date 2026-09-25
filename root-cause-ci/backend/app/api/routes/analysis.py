@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -10,6 +13,8 @@ from app.services.pipeline_analyzer import PipelineAnalyzer
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.security import decode_token
 from app.models.user import User
+from app.models.analysis_report import AnalysisReport
+from app.models.rca import CandidateCommitRecord, DependencyPathRecord, EvidenceItemRecord, FailureLocalizationRecord
 from sqlalchemy import select
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -80,3 +85,90 @@ def get_analysis_history(
         })
 
     return {"reports": history}
+
+
+def _owned_report(db: Session, report_id: int, user_id: int) -> AnalysisReport:
+    report = db.scalar(
+        select(AnalysisReport).where(
+            AnalysisReport.id == report_id,
+            AnalysisReport.user_id == user_id,
+        )
+    )
+    if not report:
+        raise HTTPException(status_code=404, detail="Analysis report not found")
+    return report
+
+
+@router.get("/{report_id}/localization")
+def get_localization(report_id: int, db: Session = Depends(get_db_session), user_id: int = Depends(get_current_user_id)):
+    _owned_report(db, report_id, user_id)
+    record = db.scalar(select(FailureLocalizationRecord).where(FailureLocalizationRecord.analysis_report_id == report_id))
+    if not record:
+        raise HTTPException(status_code=404, detail="Failure localization not available")
+    return {
+        "status": record.status,
+        "reason": record.reason,
+        "exception_type": record.exception_type,
+        "exception_message": record.exception_message,
+        "failed_test": record.failed_test,
+        "frames": json.loads(record.frames_json),
+    }
+
+
+@router.get("/{report_id}/candidates")
+def get_candidates(report_id: int, db: Session = Depends(get_db_session), user_id: int = Depends(get_current_user_id)):
+    _owned_report(db, report_id, user_id)
+    records = db.scalars(select(CandidateCommitRecord).where(CandidateCommitRecord.analysis_report_id == report_id)).all()
+    return {"candidates": [{
+        "commit_sha": record.commit_sha,
+        "subject": record.subject,
+        "score": record.score,
+        "components": json.loads(record.components_json),
+        "changed_files": json.loads(record.changed_files_json),
+        "changed_lines": json.loads(record.changed_lines_json),
+    } for record in records]}
+
+
+@router.get("/{report_id}/attribution")
+def get_attribution(report_id: int, db: Session = Depends(get_db_session), user_id: int = Depends(get_current_user_id)):
+    _owned_report(db, report_id, user_id)
+    records = db.scalars(
+        select(CandidateCommitRecord)
+        .where(CandidateCommitRecord.analysis_report_id == report_id)
+        .order_by(CandidateCommitRecord.score.desc())
+    ).all()
+    return {"root_cause": ({
+        "commit_sha": records[0].commit_sha,
+        "score": records[0].score,
+        "components": json.loads(records[0].components_json),
+    } if records else None)}
+
+
+@router.get("/{report_id}/evidence")
+def get_evidence(report_id: int, db: Session = Depends(get_db_session), user_id: int = Depends(get_current_user_id)):
+    _owned_report(db, report_id, user_id)
+    records = db.scalars(select(EvidenceItemRecord).where(EvidenceItemRecord.analysis_report_id == report_id)).all()
+    return {"evidence": [{
+        "type": record.evidence_type,
+        "source": record.source,
+        "description": record.description,
+        "value": json.loads(record.value_json),
+        "relevance": record.relevance,
+        "location": record.location,
+        "supports": record.supports,
+    } for record in records]}
+
+
+@router.get("/{report_id}/graph")
+def get_dependency_paths(report_id: int, db: Session = Depends(get_db_session), user_id: int = Depends(get_current_user_id)):
+    _owned_report(db, report_id, user_id)
+    records = db.scalars(select(DependencyPathRecord).where(DependencyPathRecord.analysis_report_id == report_id)).all()
+    return {"paths": [json.loads(record.path_json) for record in records]}
+
+
+@router.get("/evaluation/latest")
+def get_latest_evaluation() -> dict:
+    result_path = Path(__file__).resolve().parents[3] / "benchmark_results" / "latest.json"
+    if not result_path.exists():
+        raise HTTPException(status_code=404, detail="No benchmark results have been generated")
+    return json.loads(result_path.read_text(encoding="utf-8"))

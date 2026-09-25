@@ -1,27 +1,28 @@
 # Root Cause Driven CI/CD Pipeline Automation
 
-Evidence-first CI/CD failure diagnosis and verified remediation prototype.
+Evidence-first CI/CD failure diagnosis prototype for GitHub Actions.
 
-## Phase 1 status
+## Current implementation
 
-Implemented:
-- Monorepo skeleton
-- FastAPI backend with a `GET /health` endpoint
-- GitHub webhook ingestion scaffold for workflow failure events
-- PostgreSQL service via Docker Compose
-- React + TypeScript frontend shell
-- Shared environment configuration
-- Starter documentation for the research prototype
+The current prototype includes:
+- FastAPI health, authentication, repository, analysis, webhook, and patch routes
+- Signed expiring auth tokens and protected API middleware
+- GitHub Actions run/job/log retrieval and webhook signature validation
+- Persistent webhook delivery records with duplicate-delivery replay
+- Deterministic failure classification and in-memory flaky-test scoring
+- Local Git metadata, diff, blame, and candidate scoring services
+- Python Tree-sitter parsing and NetworkX graph primitives
+- Evidence-chain generation and explainable candidate contributions
+- Evidence-gated LLM summaries and unified-diff patch requests
+- Unified-diff scope validation and a persisted verification gate before PR creation
+- React dashboard for repository analysis, history, evidence, and explicit stage status
 
-Not implemented yet:
-- Failure classification, attribution, patch generation, sandbox verification, and fix PR automation
-
-## Phase 2 status
-
-Phase 2 adds the first GitHub integration layer:
-- GitHub Actions workflow for the demo repository
-- `POST /webhooks/github` ingestion endpoint
-- Normalized failure and pipeline models for incoming webhook payloads
+The following remain incomplete and are intentionally shown as skipped in the UI:
+- Durable normalized failure/test/candidate/evidence domain storage
+- Complete AST/import/dependency analysis connected to GitHub analysis
+- Docker sandbox execution and test-result capture
+- Patch application, verification orchestration, and verified Fix PR creation
+- Research dataset, evaluation metrics, and ablation runner
 
 ## Quick start
 
@@ -46,11 +47,11 @@ Open `http://localhost:5173`
 
 - `backend/` - FastAPI application and tests
 - `frontend/` - React dashboard shell
-- `sandbox/` - isolated execution placeholder for later phases
-- `demo-repository/` - controlled failure scenarios for later evaluation
+- `sandbox/` - reserved for isolated patch verification
+- `demo-repository/` - small GitHub Actions test repository
 - `docs/` - architecture, security, API, and research notes
 
-## Phase 1 validation
+## Validation
 
 Run backend tests from `backend/`:
 
@@ -67,8 +68,4 @@ npm run build
 
 ## Environment variables
 
-See `.env.example` for the current Phase 1 settings.
-
-## What comes next
-
-Phase 2 will add GitHub Actions integration, webhook ingestion, and failure event capture.
+See `.env.example` for the current settings. `AUTH_SECRET` and GitHub/LLM credentials must be set outside source control.

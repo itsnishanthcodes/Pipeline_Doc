@@ -58,3 +58,31 @@ def test_git_analysis_extracts_metadata_diff_blame_and_candidates() -> None:
         assert result.candidates[0].file_overlap_score == 1.0
         assert result.candidates[0].blame_score == 1.0
         assert result.candidates[0].rank_score > 0.0
+
+
+def test_git_analysis_ranks_changed_failure_line_over_unrelated_commit() -> None:
+    with TemporaryDirectory() as temp_dir:
+        repo_path = Path(temp_dir)
+        run_git(repo_path, "init")
+        run_git(repo_path, "config", "user.name", "Test User")
+        run_git(repo_path, "config", "user.email", "test@example.com")
+
+        source_file = repo_path / "src" / "checkout.py"
+        source_file.parent.mkdir()
+        base_commit = create_commit(repo_path, source_file, "def total():\n    return 10\n", "base")
+        create_commit(repo_path, repo_path / "README.md", "notes\n", "unrelated documentation")
+        failing_commit = create_commit(repo_path, source_file, "def total():\n    return 8\n", "change checkout total")
+
+        candidates = GitAnalysisService(repo_path).build_candidate_commits(
+            previous_successful_commit_sha=base_commit,
+            failing_commit_sha=failing_commit,
+            file_path="src/checkout.py",
+            line_number=2,
+        )
+
+        assert candidates[0].commit_sha == failing_commit
+        assert candidates[0].line_overlap_score == 1.0
+        assert candidates[0].evidence_components["line_overlap"]["status"] == "COMPUTED"
+        unrelated = next(candidate for candidate in candidates if candidate.subject == "unrelated documentation")
+        assert unrelated.file_overlap_score == 0.0
+        assert unrelated.rank_score < candidates[0].rank_score
