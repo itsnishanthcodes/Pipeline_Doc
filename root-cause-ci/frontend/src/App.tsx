@@ -1,110 +1,28 @@
-import { useEffect, useState } from 'react';
-import { AuthModal } from './components/AuthModal';
-import { DashboardWorkspace } from './components/DashboardWorkspace';
-import { EvaluationMetrics } from './components/EvaluationMetrics';
-import { HeroSection } from './components/HeroSection';
-import { MethodologyFlow } from './components/MethodologyFlow';
-import { Navbar } from './components/Navbar';
-import { ProblemObjectives } from './components/ProblemObjectives';
-import { ProfileModal } from './components/ProfileModal';
-import { TeamFooter } from './components/TeamFooter';
-import { fetchHealth } from './services/api';
-import type { UserAuthData } from './services/authApi';
-import type { HealthResponse } from './types/health';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { AnalyzePage } from './components/app/AnalyzePage';
+import { AppShell, RequireAuth } from './components/app/AppShell';
+import { HistoryPage } from './components/app/HistoryPage';
+import { ReportPage } from './components/app/ReportPage';
+import { RepositoriesPage } from './components/app/RepositoriesPage';
+import { SettingsPage } from './components/app/SettingsPage';
+import { AuthPage } from './components/auth/AuthPage';
+import { LandingPage } from './components/landing/LandingPage';
 
-function App() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [healthError, setHealthError] = useState<string | null>(null);
-  const [scrollY, setScrollY] = useState(0);
-
-  // Theme toggle state
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-
-  const [authOpen, setAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<UserAuthData | null>(null);
-
-  useEffect(() => {
-    // Set theme on root HTML element
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-
-  useEffect(() => {
-    fetchHealth()
-      .then(setHealth)
-      .catch((reason: unknown) => {
-        setHealthError(reason instanceof Error ? reason.message : 'Failed to connect to backend health API');
-      });
-
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
-
-  const handleOpenAuth = (mode: 'login' | 'register') => {
-    setAuthMode(mode);
-    setAuthOpen(true);
-  };
-
+export default function App() {
   return (
-    <div className="main-wrapper">
-      <Navbar
-        onOpenAuth={handleOpenAuth}
-        currentUser={currentUser}
-        onLogout={() => setCurrentUser(null)}
-        onOpenProfile={() => setProfileOpen(true)}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
-
-      <main>
-        {currentUser ? (
-          /* Render Authenticated Developer Workspace when Logged In */
-          <DashboardWorkspace
-            user={currentUser}
-            onLogout={() => setCurrentUser(null)}
-            onOpenProfile={() => setProfileOpen(true)}
-          />
-        ) : (
-          /* Render Landing Page & Project Showcase when Logged Out */
-          <>
-            <HeroSection
-              onGetStarted={() => handleOpenAuth('register')}
-              scrollY={scrollY}
-            />
-            <ProblemObjectives />
-            <MethodologyFlow />
-            <EvaluationMetrics health={health} error={healthError} />
-          </>
-        )}
-      </main>
-
-      <TeamFooter />
-
-      <AuthModal
-        isOpen={authOpen}
-        onClose={() => setAuthOpen(false)}
-        onSuccess={(user) => setCurrentUser(user)}
-        initialMode={authMode}
-      />
-
-      {currentUser && (
-        <ProfileModal
-          isOpen={profileOpen}
-          onClose={() => setProfileOpen(false)}
-          currentUser={currentUser}
-          onUpdateUser={(updated) => setCurrentUser(updated)}
-        />
-      )}
-    </div>
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/signin" element={<AuthPage mode="signin" />} />
+      <Route path="/signup" element={<AuthPage mode="signup" />} />
+      <Route path="/app" element={<RequireAuth><AppShell /></RequireAuth>}>
+        <Route index element={<Navigate to="repositories" replace />} />
+        <Route path="repositories" element={<RepositoriesPage />} />
+        <Route path="analyze" element={<AnalyzePage />} />
+        <Route path="history" element={<HistoryPage />} />
+        <Route path="reports/:id" element={<ReportPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
-
-export default App;

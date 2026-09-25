@@ -168,7 +168,8 @@ class PipelineAnalyzer:
 
         classification = primary["classification"]
         llm_summary = patch.get("summary") or (
-            f"Job '{primary['name']}' failed with category {classification.category}. {classification.explanation}"
+            f"The '{primary['name']}' job failed. {classification.explanation}"
+            + (f" The most likely cause is commit {best['commit_sha'][:7]}." if best else "")
         )
         report_body = self._markdown_report(run_id, primary, classification, flaky, best, evidence, confidence,
                                             llm_summary, patch)

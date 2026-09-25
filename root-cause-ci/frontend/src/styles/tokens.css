@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+/*
+  Root Cause CI design tokens.
+  Ink background with slow teal and mulberry light; frosted glass only on top-level surfaces.
+  Status colours carry meaning (pass, fail, pending) and are never used as decoration.
+*/
+:root {
+  --font-display: 'Bricolage Grotesque', 'Segoe UI', sans-serif;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  /* type scale, ratio 1.25 from a 16px base */
+  --fs-sm: 0.8125rem;
+  --fs-base: 1rem;
+  --fs-md: 1.25rem;
+  --fs-lg: 1.5625rem;
+  --fs-xl: 1.9375rem;
+  --fs-2xl: 2.4375rem;
+  --fs-3xl: 3.0625rem;
+  --fs-hero: clamp(2.6rem, 5.4vw, 4.4rem);
+
+  --radius-panel: 22px;
+  --radius-control: 11px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 72px;
+  --space-9: 112px;
+
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --page-max: 1180px;
+}
+
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --ink: #0e1624;
+  --tide: #1f3b4d;
+  --mulberry: #3a2440;
+  --surface: rgba(236, 242, 255, 0.055);
+  --surface-raised: rgba(236, 242, 255, 0.085);
+  --surface-sunken: rgba(4, 9, 18, 0.45);
+  --line: rgba(236, 242, 255, 0.11);
+  --line-strong: rgba(236, 242, 255, 0.2);
+  --highlight: rgba(255, 255, 255, 0.14);
+  --shadow: 0 24px 60px -34px rgba(0, 0, 0, 0.75);
+
+  --text: #e8eef7;
+  --text-2: #a9b6c8;
+  --text-3: #75849b;
+
+  --pass: #7fd6a4;
+  --fail: #ff7a6b;
+  --pending: #f3c969;
+  --accent: #9cc9ff;
+  --accent-strong: #c3ddff;
+  --on-accent: #0e1624;
+
+  --pass-wash: rgba(127, 214, 164, 0.12);
+  --fail-wash: rgba(255, 122, 107, 0.12);
+  --pending-wash: rgba(243, 201, 105, 0.12);
+  --accent-wash: rgba(156, 201, 255, 0.12);
+
+  --grain-opacity: 0.06;
+  --field-opacity: 0.9;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --ink: #e9eef5;
+  --tide: #bfdbe3;
+  --mulberry: #e2d2e8;
+  --surface: rgba(255, 255, 255, 0.58);
+  --surface-raised: rgba(255, 255, 255, 0.78);
+  --surface-sunken: rgba(22, 32, 46, 0.05);
+  --line: rgba(22, 32, 46, 0.1);
+  --line-strong: rgba(22, 32, 46, 0.2);
+  --highlight: rgba(255, 255, 255, 0.9);
+  --shadow: 0 24px 50px -32px rgba(22, 32, 46, 0.35);
+
+  --text: #16202e;
+  --text-2: #45546a;
+  --text-3: #6b7a90;
+
+  --pass: #1d7f50;
+  --fail: #c73e33;
+  --pending: #946812;
+  --accent: #2c67b8;
+  --accent-strong: #1d4f93;
+  --on-accent: #ffffff;
+
+  --pass-wash: rgba(29, 127, 80, 0.1);
+  --fail-wash: rgba(199, 62, 51, 0.09);
+  --pending-wash: rgba(148, 104, 18, 0.1);
+  --accent-wash: rgba(44, 103, 184, 0.1);
+
+  --grain-opacity: 0.05;
+  --field-opacity: 1;
+}

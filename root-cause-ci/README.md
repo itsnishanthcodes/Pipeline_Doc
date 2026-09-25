@@ -54,6 +54,23 @@ The evaluation runs the deterministic pipeline on 13 labelled, synthetic failure
 `evaluation/results/results.md`. It compares commit attribution with the naive baseline of blaming the
 latest commit. It does not measure LLM patch quality or real-world accuracy.
 
+## Security (Phase 2)
+
+- Sign-in returns a signed, expiring JWT. Set `JWT_SECRET` in production; in development a per-install
+  secret is generated in `backend/.local_secret` (git-ignored).
+- Passwords use PBKDF2-SHA256 with a unique salt. Older hashes are upgraded on the next sign-in.
+- GitHub tokens are encrypted at rest and never returned by the API. Set `TOKEN_ENCRYPTION_KEY` to use a
+  separate key.
+- With `APP_ENV=production`, unsigned webhooks are refused; set `GITHUB_WEBHOOK_SECRET`.
+- Credentials are redacted from CI logs before they are stored or sent to the LLM.
+
+## Web app (Phase 3)
+
+The frontend is a routed React app: a landing page (`/`), sign-in and sign-up, and the signed-in app
+at `/app` with Repositories, Analyze a run (pick a run from a list), History, report pages
+(`/app/reports/:id`) and Settings. Sessions survive a page refresh. Light and dark themes follow the
+system setting and can be switched from the header.
+
 ## Quick start
 
 1. Copy `.env.example` to `.env` and adjust values if needed.

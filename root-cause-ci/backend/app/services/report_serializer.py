@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 from app.models.analysis_report import AnalysisReport
+
+
+def _iso_utc(value: datetime | None) -> str | None:
+    """ISO timestamp with an explicit UTC offset (SQLite returns naive datetimes)."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.isoformat()
 
 
 def serialize_report(report: AnalysisReport) -> dict[str, Any]:
@@ -28,7 +38,7 @@ def serialize_report(report: AnalysisReport) -> dict[str, Any]:
         "pr_number": report.pr_number,
         "author": report.author,
         "comment_posted": report.comment_posted,
-        "created_at": report.created_at.isoformat() if report.created_at else None,
+        "created_at": _iso_utc(report.created_at),
         "run": d.get("run"),
         "jobs": d.get("jobs", []),
         "primary_job": d.get("primary_job"),
