@@ -49,6 +49,14 @@ def test_culprit_is_not_simply_the_latest_commit():
     assert "add" in text and "src/calc.py" in text
 
 
+def test_file_name_must_match_whole_name_in_log():
+    candidates = [CandidateCommit(sha="a" * 40, files=[CommitFile("src/calc.py", None)])]
+    inputs = SignalInputs(frames=[], log_text="FAILED tests/test_calc.py::test_add", functions_by_file={}, test_sources={})
+    assert score_signals(candidates, inputs)[0]["signals"]["file_overlap"] == 0.0
+    inputs.log_text = "pip install -r requirements.txt\nerror in calc.py"
+    assert score_signals(candidates, inputs)[0]["signals"]["file_overlap"] == 0.5
+
+
 def test_stack_trace_line_hit_and_blame():
     candidates = [CandidateCommit(sha="abcdef1234", files=[CommitFile("src/calc.py", CALC_PATCH)])]
     hit = score_signals(candidates, SignalInputs(frames=[StackFrame("src/calc.py", 2)], log_text="",

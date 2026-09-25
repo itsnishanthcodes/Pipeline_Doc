@@ -1,9 +1,9 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 ROOT_ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
 
@@ -28,7 +28,8 @@ class Settings(BaseSettings):
     llm_api_key: str | None = Field(default=None, alias="LLM_API_KEY")
     llm_model: str = Field(default="llama-3.1-8b-instant", alias="LLM_MODEL")
     llm_api_url: str = Field(default="https://api.groq.com/openai/v1/chat/completions", alias="LLM_API_URL")
-    cors_origins: list[str] = Field(
+    # NoDecode: accept the documented comma-separated form instead of requiring a JSON list
+    cors_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:5173"],
         alias="BACKEND_CORS_ORIGINS",
     )

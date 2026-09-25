@@ -136,7 +136,7 @@ class PipelineAnalyzer:
                             if not is_test_path(p) and any(module_matches_path(m, p) for m in test_imports)]
         target = choose_target_file(frames, best, imported_changed)
         if flaky.classification == "LIKELY_FLAKY":
-            patch = {"status": "skipped", "file_path": target, "summary": None, "new_content": None, "diff": None,
+            patch = {"status": "skipped", "file_path": None, "summary": None, "new_content": None, "diff": None,
                      "reason": "The failure looks flaky, so no code change is proposed. Re-run the job to confirm."}
         else:
             original = None

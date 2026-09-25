@@ -145,7 +145,7 @@
       "ranking": [
         "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1"
       ],
-      "top_confidence": 0.7,
+      "top_confidence": 0.6,
       "baseline_latest": "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
       "expected_target": "src/calc.py",
       "predicted_target": "src/calc.py",
@@ -166,7 +166,7 @@
         "f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3",
         "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1"
       ],
-      "top_confidence": 0.6,
+      "top_confidence": 0.5,
       "baseline_latest": "f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4",
       "expected_target": "src/calc.py",
       "predicted_target": "src/calc.py",
@@ -224,7 +224,7 @@
         "i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1",
         "i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2"
       ],
-      "top_confidence": 0.6,
+      "top_confidence": 0.5,
       "baseline_latest": "i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2",
       "expected_target": "src/shapes.py",
       "predicted_target": "src/shapes.py",
@@ -242,7 +242,7 @@
       "ranking": [
         "j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1"
       ],
-      "top_confidence": 0.35,
+      "top_confidence": 0.25,
       "baseline_latest": "j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1",
       "expected_target": null,
       "predicted_target": "src/api.py",
@@ -278,7 +278,7 @@
       "ranking": [
         "l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1"
       ],
-      "top_confidence": 0.7,
+      "top_confidence": 0.6,
       "baseline_latest": "l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1",
       "expected_target": "src/calc.py",
       "predicted_target": "src/calc.py",

@@ -119,7 +119,9 @@ def score_signals(candidates: list[CandidateCommit], inputs: SignalInputs) -> li
 
         # file overlap: files touched by the commit that appear in stack frames (strong) or by name in the log (weak)
         in_frames = [p for p in paths if p in frame_files]
-        by_name = [p for p in paths if p not in in_frames and p.rsplit("/", 1)[-1].lower() in log_lower]
+        # whole-name match only: "calc.py" must not match inside "test_calc.py"
+        by_name = [p for p in paths if p not in in_frames and re.search(
+            rf"(?<![\w.-]){re.escape(p.rsplit('/', 1)[-1].lower())}(?![\w-])", log_lower)]
         file_overlap = 1.0 if in_frames else (0.5 if by_name else 0.0)
         if in_frames:
             reasons["file_overlap"] = f"Modified {', '.join(in_frames[:3])}, which appears in the failure stack trace"

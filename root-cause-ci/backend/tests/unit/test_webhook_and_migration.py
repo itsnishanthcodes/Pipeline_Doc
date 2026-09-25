@@ -45,3 +45,9 @@ def test_first_failure_after_green_history_is_not_flaky():
     for outcome in ["PASS"] * 9 + ["FAIL"]:
         detector.record_run("job", outcome=outcome)
     assert detector.analyze("job").classification == "LIKELY_STABLE"
+
+
+def test_cors_origins_accept_comma_separated_env(monkeypatch):
+    from app.core.config import Settings
+    monkeypatch.setenv("BACKEND_CORS_ORIGINS", "http://localhost:5173, http://localhost:5174")
+    assert Settings().cors_origins == ["http://localhost:5173", "http://localhost:5174"]
