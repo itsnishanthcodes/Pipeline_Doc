@@ -1,0 +1,306 @@
+{
+  "summary": {
+    "scenarios": 13,
+    "classification_accuracy": [
+      12,
+      13
+    ],
+    "per_category": {
+      "CODE_REGRESSION": {
+        "precision": 0.875,
+        "recall": 1.0,
+        "support": 7
+      },
+      "CONFIGURATION_FAILURE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 1
+      },
+      "DEPENDENCY_FAILURE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 2
+      },
+      "INFRASTRUCTURE_FAILURE": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "support": 2
+      },
+      "UNKNOWN": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 1
+      }
+    },
+    "attribution_top1": [
+      9,
+      9
+    ],
+    "attribution_top3": [
+      9,
+      9
+    ],
+    "baseline_latest_commit_top1": [
+      3,
+      9
+    ],
+    "flaky_detected": [
+      2,
+      2
+    ],
+    "flaky_false_positives": [
+      0,
+      11
+    ],
+    "target_file_accuracy": [
+      9,
+      9
+    ]
+  },
+  "scenarios": [
+    {
+      "scenario": "configuration: missing environment variable",
+      "expected_category": "CONFIGURATION_FAILURE",
+      "predicted_category": "CONFIGURATION_FAILURE",
+      "expected_flaky": false,
+      "predicted_flaky": false,
+      "flaky_verdict": "LIKELY_STABLE",
+      "flaky_probability": 0.106,
+      "expected_culprit": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+      "ranking": [
+        "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+        "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+      ],
+      "top_confidence": 0.65,
+      "baseline_latest": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+      "expected_target": "app/settings.py",
+      "predicted_target": "app/settings.py",
+      "error_message": "RuntimeError: Required environment variable DATABASE_URL is not set"
+    },
+    {
+      "scenario": "infrastructure: docker daemon unavailable",
+      "expected_category": "INFRASTRUCTURE_FAILURE",
+      "predicted_category": "INFRASTRUCTURE_FAILURE",
+      "expected_flaky": false,
+      "predicted_flaky": false,
+      "flaky_verdict": "LIKELY_STABLE",
+      "flaky_probability": 0.106,
+      "expected_culprit": null,
+      "ranking": [
+        "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+      ],
+      "top_confidence": 0.25,
+      "baseline_latest": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+      "expected_target": null,
+      "predicted_target": "src/api.py",
+      "error_message": "##[error]Process completed with exit code 1."
+    },
+    {
+      "scenario": "dependency: unresolvable version pin",
+      "expected_category": "DEPENDENCY_FAILURE",
+      "predicted_category": "DEPENDENCY_FAILURE",
+      "expected_flaky": false,
+      "predicted_flaky": false,
+      "flaky_verdict": "LIKELY_STABLE",
+      "flaky_probability": 0.106,
+      "expected_culprit": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+      "ranking": [
+        "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+      ],
+      "top_confidence": 0.25,
+      "baseline_latest": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2",
+      "expected_target": "requirements.txt",
+      "predicted_target": "requirements.txt",
+      "error_message": "ERROR: No matching distribution found for requests==99.0"
+    },
+    {
+      "scenario": "dependency: new import of an uninstalled module",
+      "expected_category": "DEPENDENCY_FAILURE",
+      "predicted_category": "DEPENDENCY_FAILURE",
+      "expected_flaky": false,
+      "predicted_flaky": false,
+      "flaky_verdict": "LIKELY_STABLE",
+      "flaky_probability": 0.106,
+      "expected_culprit": "d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+      "ranking": [
+        "d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+        "d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2"
+      ],
+      "top_confidence": 0.55,
+      "baseline_latest": "d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2",
+      "expected_target": "src/loader.py",
+      "predicted_target": "src/loader.py",
+      "error_message": "ModuleNotFoundError: No module named 'yaml'"
+    },
+    {
+      "scenario": "code regression: single commit",
+      "expected_category": "CODE_REGRESSION",
+      "predicted_category": "CODE_REGRESSION",
+      "expected_flaky": false,
+      "predicted_flaky": false,
+      "flaky_verdict": "LIKELY_STABLE",
+      "flaky_probability": 0.106,
+      "expected_culprit": "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
+      "ranking": [
+        "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1"
+      ],
+      "top_confidence": 0.7,
+      "baseline_latest": "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
+      "expected_target": "src/calc.py",
+      "predicted_target": "src/calc.py",
+      "error_message": "assert 6 == 5"
+    },
+    {
+      "scenario": "code regression: culprit is not the latest commit",
+      "expected_category": "CODE_REGRESSION",
+      "predicted_category": "CODE_REGRESSION",
+      "expected_flaky": false,
+      "predicted_flaky": false,
+      "flaky_verdict": "LIKELY_STABLE",
+      "flaky_probability": 0.106,
+      "expected_culprit": "f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2",
+      "ranking": [
+        "f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2",
+        "f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4",
+        "f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3",
+        "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1"
+      ],
+      "top_confidence": 0.6,
+      "baseline_latest": "f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4",
+      "expected_target": "src/calc.py",
+      "predicted_target": "src/calc.py",
+      "error_message": "assert 6 == 5"
+    },
+    {
+      "scenario": "code regression: exception raised in changed source line",
+      "expected_category": "CODE_REGRESSION",
+      "predicted_category": "CODE_REGRESSION",
+      "expected_flaky": false,
+      "predicted_flaky": false,
+      "flaky_verdict": "LIKELY_STABLE",
+      "flaky_probability": 0.106,
+      "expected_culprit": "g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1",
+      "ranking": [
+        "g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1g1",
+        "g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3",
+        "g2g2g2g2g2g2g2g2g2g2g2g2g2g2g2g2g2g2g2g2"
+      ],
+      "top_confidence": 0.8666,
+      "baseline_latest": "g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3g3",
+      "expected_target": "src/orders.py",
+      "predicted_target": "src/orders.py",
+      "error_message": "ZeroDivisionError: division by zero"
+    },
+    {
+      "scenario": "code regression: older commit changed the failing function",
+      "expected_category": "CODE_REGRESSION",
+      "predicted_category": "CODE_REGRESSION",
+      "expected_flaky": false,
+      "predicted_flaky": false,
+      "flaky_verdict": "LIKELY_STABLE",
+      "flaky_probability": 0.106,
+      "expected_culprit": "h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1",
+      "ranking": [
+        "h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1h1",
+        "h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2"
+      ],
+      "top_confidence": 0.9,
+      "baseline_latest": "h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2h2",
+      "expected_target": "src/util.py",
+      "predicted_target": "src/util.py",
+      "error_message": "AttributeError: 'NoneType' object has no attribute 'lower'"
+    },
+    {
+      "scenario": "code regression: two commits touch the same file",
+      "expected_category": "CODE_REGRESSION",
+      "predicted_category": "CODE_REGRESSION",
+      "expected_flaky": false,
+      "predicted_flaky": false,
+      "flaky_verdict": "LIKELY_STABLE",
+      "flaky_probability": 0.106,
+      "expected_culprit": "i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1",
+      "ranking": [
+        "i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1i1",
+        "i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2"
+      ],
+      "top_confidence": 0.6,
+      "baseline_latest": "i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2i2",
+      "expected_target": "src/shapes.py",
+      "predicted_target": "src/shapes.py",
+      "error_message": "assert 12 == 6"
+    },
+    {
+      "scenario": "flaky: intermittent timeout, same commit passed on rerun",
+      "expected_category": "INFRASTRUCTURE_FAILURE",
+      "predicted_category": "CODE_REGRESSION",
+      "expected_flaky": true,
+      "predicted_flaky": true,
+      "flaky_verdict": "LIKELY_FLAKY",
+      "flaky_probability": 1.0,
+      "expected_culprit": null,
+      "ranking": [
+        "j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1"
+      ],
+      "top_confidence": 0.35,
+      "baseline_latest": "j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1j1",
+      "expected_target": null,
+      "predicted_target": "src/api.py",
+      "error_message": "TimeoutError: timed out after 30s waiting for http://localhost:9000"
+    },
+    {
+      "scenario": "flaky: order-dependent test",
+      "expected_category": "CODE_REGRESSION",
+      "predicted_category": "CODE_REGRESSION",
+      "expected_flaky": true,
+      "predicted_flaky": true,
+      "flaky_verdict": "LIKELY_FLAKY",
+      "flaky_probability": 1.0,
+      "expected_culprit": null,
+      "ranking": [
+        "k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1"
+      ],
+      "top_confidence": 0.25,
+      "baseline_latest": "k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1k1",
+      "expected_target": null,
+      "predicted_target": "README.md",
+      "error_message": "assert 3 == 0"
+    },
+    {
+      "scenario": "not flaky: first failure after a long green history",
+      "expected_category": "CODE_REGRESSION",
+      "predicted_category": "CODE_REGRESSION",
+      "expected_flaky": false,
+      "predicted_flaky": false,
+      "flaky_verdict": "LIKELY_STABLE",
+      "flaky_probability": 0.073,
+      "expected_culprit": "l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1",
+      "ranking": [
+        "l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1"
+      ],
+      "top_confidence": 0.7,
+      "baseline_latest": "l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1l1",
+      "expected_target": "src/calc.py",
+      "predicted_target": "src/calc.py",
+      "error_message": "assert 3 == 2"
+    },
+    {
+      "scenario": "unknown: native crash",
+      "expected_category": "UNKNOWN",
+      "predicted_category": "UNKNOWN",
+      "expected_flaky": false,
+      "predicted_flaky": false,
+      "flaky_verdict": "LIKELY_STABLE",
+      "flaky_probability": 0.106,
+      "expected_culprit": null,
+      "ranking": [
+        "m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1"
+      ],
+      "top_confidence": 0.25,
+      "baseline_latest": "m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1m1",
+      "expected_target": null,
+      "predicted_target": "Makefile",
+      "error_message": "##[error]Process completed with exit code 1."
+    }
+  ]
+}

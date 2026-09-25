@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
-from typing import Iterable
+
+FAILED_TEST_ID = re.compile(r"^(?:FAILED|ERROR)\s+\S+::\S+", re.MULTILINE)
 
 from app.schemas.classification import FailureClassification
 from app.schemas.ingestion import Failure
@@ -84,7 +86,18 @@ class FailureClassifier:
                     explanation="The failing test appears after a code change and the text looks like an assertion-driven failure.",
                 )
             )
-        if "assertionerror" in lowered or "assert " in lowered or "expected" in lowered and "got" in lowered:
+        if failure.commit_sha and FAILED_TEST_ID.search(text):
+            # A test runner reported a specific failing test (for example "FAILED tests/x.py::test_y") after a
+            # code change. This covers runtime exceptions raised inside tests, not only assertion mismatches.
+            candidates.append(
+                ClassificationRule(
+                    category="CODE_REGRESSION",
+                    confidence=0.84,
+                    signal="failing_test_after_code_change",
+                    explanation="A specific test failed after a code change, which indicates a regression in the code under test.",
+                )
+            )
+        if "assertionerror" in lowered or "assert " in lowered or ("expected" in lowered and "got" in lowered):
             candidates.append(
                 ClassificationRule(
                     category="CODE_REGRESSION",
